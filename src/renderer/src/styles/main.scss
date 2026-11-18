@@ -1,0 +1,133 @@
+@use './tokens' as *;
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#app,
+#app > div,
+.n-config-provider {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  font-family: var(--font);
+  background: var(--bg);
+  color: var(--text);
+  font-size: 14px;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+  overflow: hidden;
+}
+
+// 顶部氛围光
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(800px 320px at 18% -8%, rgba(124, 92, 255, 0.16), transparent 60%),
+    radial-gradient(600px 240px at 92% -10%, rgba(34, 211, 238, 0.1), transparent 60%);
+  z-index: 0;
+}
+
+a {
+  color: var(--accent-2);
+  text-decoration: none;
+}
+
+// 滚动条
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-thumb {
+  background: #2a2f3f;
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #39405a;
+  background-clip: content-box;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+// 通用工具类
+.mono {
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+}
+
+.muted {
+  color: var(--text-2);
+}
+
+.dim {
+  color: var(--text-3);
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.grow {
+  flex: 1;
+}
+
+.page {
+  padding: 22px 26px 32px;
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+}
+
+.page-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 18px;
+}
+
+.page-title {
+  font-size: 21px;
+  font-weight: 650;
+  letter-spacing: 0.2px;
+  margin: 0;
+}
+
+.page-sub {
+  margin: 4px 0 0;
+  color: var(--text-3);
+  font-size: 12.5px;
+}
+
+.grid-cards {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+
+  @media (max-width: $bp-md) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.grid-2 {
+  display: grid;
+  grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr);
+  gap: 14px;
+  margin-top: 14px;
+
+  @media (max-width: $bp-md) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

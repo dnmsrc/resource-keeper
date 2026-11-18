@@ -1,0 +1,42 @@
+{
+  "name": "resource-keeper",
+  "version": "0.1.0",
+  "description": "本地资源管家：把散落在多块硬盘里的资源变成可查询的台账与标签体系",
+  "main": "./out/main/index.js",
+  "license": "MIT",
+  "private": true,
+  "scripts": {
+    "dev": "electron-vite dev",
+    "start": "electron-vite preview",
+    "build": "npm run typecheck && electron-vite build",
+    "typecheck:node": "tsc --noEmit -p tsconfig.node.json --composite false",
+    "typecheck:web": "vue-tsc --noEmit -p tsconfig.web.json --composite false",
+    "typecheck": "npm run typecheck:node && npm run typecheck:web",
+    "pack": "npm run build && electron-builder --dir",
+    "dist": "npm run build && electron-builder"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "electron",
+      "esbuild",
+      "@parcel/watcher"
+    ]
+  },
+  "dependencies": {
+    "@vicons/ionicons5": "^0.13.0",
+    "naive-ui": "^2.45.3",
+    "pinia": "^4.1.0",
+    "vue": "^3.5.45",
+    "vue-router": "^5.5.1"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.6",
+    "@vitejs/plugin-vue": "^6.0.11",
+    "electron": "^45.3.4",
+    "electron-builder": "^26.18.0",
+    "electron-vite": "^6.0.0",
+    "sass": "^1.108.2",
+    "typescript": "^5.9.3",
+    "vue-tsc": "^3.3.14"
+  }
+}

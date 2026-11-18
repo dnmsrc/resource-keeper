@@ -1,0 +1,11 @@
+node_modules/
+out/
+dist/
+release/
+data/
+resources/bin/
+*.log
+.DS_Store
+config.json
+.env
+.vite/
