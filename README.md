@@ -20,6 +20,24 @@
 
 ---
 
+## 界面
+
+| 总览 | 受管目录 |
+|---|---|
+| ![总览](docs/screenshots/dashboard.png) | ![受管目录](docs/screenshots/libraries.png) |
+
+| 扫描 | 待审 |
+|---|---|
+| ![扫描](docs/screenshots/scan.png) | ![待审](docs/screenshots/review.png) |
+
+| 标签体系 | 对话 |
+|---|---|
+| ![标签体系](docs/screenshots/tags.png) | ![对话](docs/screenshots/chat.png) |
+
+设置页见 [docs/screenshots/settings.png](docs/screenshots/settings.png)。
+
+---
+
 ## 技术选型与理由
 
 | 层 | 选型 | 为什么 |
