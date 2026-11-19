@@ -1,4 +1,5 @@
 import { app, BrowserWindow, dialog, ipcMain, shell } from 'electron'
+import { spawn } from 'node:child_process'
 import { mkdirSync } from 'node:fs'
 import { join } from 'node:path'
 import {
@@ -77,6 +78,36 @@ function createWindow(): BrowserWindow {
   return win
 }
 
+/**
+ * 交给系统文件管理器打开目录 / 定位文件。
+ *
+ * 不用 shell.openPath / shell.showItemInFolder：这两个最终走 ShellExecute，
+ * 一旦进程或目标目录的权限环境不匹配（例如目录整体性级别被降成 Low、或进程在
+ * 受限会话里），Windows 会直接弹一个「无法访问指定设备、路径或文件」的系统错误框，
+ * 用户只能点确定，界面上拿不到任何可处理的错误。直接拉起 explorer.exe 是普通
+ * CreateProcess，失败能拿到异常并转成界面提示。
+ */
+function revealInExplorer(target: string, select = false): string {
+  try {
+    const args = select ? [`/select,${target}`] : [target]
+    spawn('explorer.exe', args, { detached: true, stdio: 'ignore' }).unref()
+    return ''
+  } catch (e) {
+    return (e as Error).message
+  }
+}
+
+/** 数据目录可能被用户从资源管理器里删掉，打开前先确保它是存在的目录 */
+function openDataDir(): string {
+  const dir = dataDirInfo().path
+  try {
+    mkdirSync(dir, { recursive: true })
+  } catch (e) {
+    return `数据目录不可用：${(e as Error).message}`
+  }
+  return revealInExplorer(dir)
+}
+
 function registerIpc(): void {
   ipcMain.handle('app:info', () => {
     const dir = dataDirInfo()
@@ -106,7 +137,7 @@ function registerIpc(): void {
   ipcMain.on('win:close', (e) => BrowserWindow.fromWebContents(e.sender)?.close())
 
   // ---- 数据目录 ----
-  ipcMain.handle('app:openDataDir', () => shell.openPath(dataDirInfo().path))
+  ipcMain.handle('app:openDataDir', () => openDataDir())
 
   ipcMain.handle('app:chooseDataDir', async (e) => {
     const win = BrowserWindow.fromWebContents(e.sender)
@@ -138,10 +169,7 @@ function registerIpc(): void {
 
   // 「打开配置文件」：路径由主进程决定（可能退到数据目录），界面不猜
   ipcMain.handle('app:configPath', () => configPath())
-  ipcMain.handle('app:revealConfig', () => {
-    shell.showItemInFolder(ensureConfigFile())
-    return ''
-  })
+  ipcMain.handle('app:revealConfig', () => revealInExplorer(ensureConfigFile(), true))
 
   // 占位：阶段 1 接入真实 SQLite 台账
   ipcMain.handle('db:overview', () => ({
