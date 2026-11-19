@@ -10,6 +10,7 @@ import {
   SettingsOutline
 } from '@vicons/ionicons5'
 import type { Component } from 'vue'
+import { openSettings } from '../lib/settingsStore'
 
 const route = useRoute()
 const router = useRouter()
@@ -20,13 +21,13 @@ interface NavItem {
   icon: Component
 }
 
+/** 设置不再是路由页：它是盖在窗口上的弹窗，所以单独放 */
 const items: NavItem[] = [
   { path: '/dashboard', title: '总览', icon: GridOutline },
   { path: '/libraries', title: '受管目录', icon: FolderOutline },
   { path: '/scan', title: '扫描', icon: ScanOutline },
   { path: '/review', title: '待审', icon: CheckmarkDoneOutline },
-  { path: '/tags', title: '标签体系', icon: PricetagsOutline },
-  { path: '/settings', title: '设置', icon: SettingsOutline }
+  { path: '/tags', title: '标签体系', icon: PricetagsOutline }
 ]
 
 const active = computed(() => route.path)
@@ -48,6 +49,12 @@ function go(path: string): void {
       >
         <span class="icon"><component :is="item.icon" /></span>
         <span class="label">{{ item.title }}</span>
+        <span class="dot" />
+      </button>
+
+      <button class="nav-item settings" @click="openSettings()">
+        <span class="icon"><SettingsOutline /></span>
+        <span class="label">设置</span>
         <span class="dot" />
       </button>
     </nav>
@@ -128,5 +135,10 @@ function go(path: string): void {
 .nav-item.on .dot {
   background: var(--accent);
   box-shadow: 0 0 8px rgba(98, 80, 240, 0.45);
+}
+
+/* 设置是弹窗入口，不参与路由高亮，用一条间距和上面的页面分开 */
+.nav-item.settings {
+  margin-top: 8px;
 }
 </style>

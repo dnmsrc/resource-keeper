@@ -38,11 +38,19 @@ const pages = (process.env.SHOT_PAGES || 'dashboard')
 const outJson = path.join(outDir, 'layout-report.json')
 // 可选：加载完成后先点击一个选择器再截图（例如 SHOT_CLICK=.fab 截悬浮助手展开态）
 const clickSel = process.env.SHOT_CLICK || ''
-// 可选：按可见文本点击（tab 之类没有稳定 class 的元素用它，例如 SHOT_CLICK_TEXT=数据）
-const clickText = process.env.SHOT_CLICK_TEXT || ''
+// 可选：按可见文本依次点击（逗号分隔），例如 SHOT_CLICK_TEXT=设置,编辑
+// 设置已经改成弹窗，截图得先点开它再点别的，所以支持一串动作
+const clickTexts = (process.env.SHOT_CLICK_TEXT || '')
+  .split(',')
+  .map((s) => s.trim())
+  .filter(Boolean)
 
 const rendererHtml = path.resolve(__dirname, '../out/renderer/index.html')
 const preloadJs = path.resolve(__dirname, '../out/preload/index.js')
+
+// 窗口尺寸可调：设置弹窗这类内容比单页长的界面，需要更高的视口才能一屏看完
+const winW = Number(process.env.SHOT_W || 1400)
+const winH = Number(process.env.SHOT_H || 900)
 
 const results = []
 
@@ -93,7 +101,9 @@ function registerIpcStubs() {
         id: 'openai',
         label: 'OpenAI',
         baseUrl: 'https://api.openai.com/v1',
+        protocol: 'openai',
         model: 'gpt-4o-mini',
+        models: [{ id: 'gpt-4o-mini' }, { id: 'gpt-4o', note: '贵' }],
         hasKey: true,
         preset: true
       },
@@ -101,15 +111,9 @@ function registerIpcStubs() {
         id: 'deepseek',
         label: 'DeepSeek',
         baseUrl: 'https://api.deepseek.com/v1',
+        protocol: 'openai',
         model: 'deepseek-chat',
-        hasKey: false,
-        preset: true
-      },
-      {
-        id: 'qwen',
-        label: '通义千问',
-        baseUrl: 'https://dashscope.aliyuncs.com/compatible-mode/v1',
-        model: 'qwen-plus',
+        models: [{ id: 'deepseek-chat', note: '2折' }],
         hasKey: false,
         preset: true
       },
@@ -117,7 +121,9 @@ function registerIpcStubs() {
         id: 'ollama',
         label: 'Ollama',
         baseUrl: 'http://localhost:11434/v1',
+        protocol: 'openai',
         model: 'qwen2.5:7b',
+        models: [{ id: 'qwen2.5:7b' }],
         hasKey: true,
         preset: true
       },
@@ -125,7 +131,9 @@ function registerIpcStubs() {
         id: 'custom-ark',
         label: '火山方舟 Coding Plan',
         baseUrl: 'https://ark.cn-beijing.volces.com/api/v3',
+        protocol: 'openai',
         model: 'doubao-seed-1-6',
+        models: [{ id: 'doubao-seed-1-6', note: '2折' }, { id: 'deepseek-v3.1' }],
         hasKey: true,
         preset: false
       }
@@ -138,11 +146,19 @@ function registerIpcStubs() {
     { id: 'qwen', label: '通义千问', desc: 'DashScope 兼容模式', baseUrl: 'https://dashscope.aliyuncs.com/compatible-mode/v1', model: 'qwen-plus' },
     { id: 'ollama', label: 'Ollama', desc: '本机 11434 端口', baseUrl: 'http://localhost:11434/v1', model: 'qwen2.5:7b' }
   ])
+  ipcMain.handle('config:llm:protocols', () => [
+    { id: 'openai', label: 'OpenAI Chat Completions', available: true, desc: '兼容端点通用' },
+    { id: 'anthropic', label: 'Anthropic Messages', available: false, desc: '尚未接入' },
+    { id: 'gemini', label: 'Google Gemini', available: false, desc: '尚未接入' }
+  ])
   ipcMain.handle('config:llm:add', providersState)
   ipcMain.handle('config:llm:update', providersState)
   ipcMain.handle('config:llm:remove', providersState)
   ipcMain.handle('config:llm:setActive', providersState)
+  ipcMain.handle('app:configPath', () => path.join(dataDir, 'config.json'))
+  ipcMain.handle('app:revealConfig', () => '')
   ipcMain.handle('llm:test', () => ({ ok: false, message: '截图模式不发起网络请求' }))
+  ipcMain.handle('llm:models', () => ({ ok: true, message: '截图模式', models: [] }))
   ipcMain.handle('db:overview', () => ({
     libraries: 0,
     files: 0,
@@ -187,8 +203,8 @@ app.whenReady().then(async () => {
   if (useApp) registerIpcStubs()
 
   const win = new BrowserWindow({
-    width: 1400,
-    height: 900,
+    width: winW,
+    height: winH,
     show: false,
     backgroundColor: '#f5f6fa',
     webPreferences: useApp
@@ -225,28 +241,28 @@ app.whenReady().then(async () => {
         results.push({ route, stage: 'click', error: String(e) })
       }
     }
-    if (clickText) {
+    for (const text of clickTexts) {
       try {
         const clicked = await win.webContents.executeJavaScript(
           `(() => {
-             const nodes = [...document.querySelectorAll('.n-tabs-tab, button, a, [role="tab"]')];
-             const hit = nodes.find((n) => (n.textContent || '').trim() === ${JSON.stringify(clickText)});
+             const nodes = [...document.querySelectorAll('.n-tabs-tab, button, a, [role="tab"], .link')];
+             const hit = nodes.find((n) => (n.textContent || '').trim() === ${JSON.stringify(text)});
              if (!hit) return false;
              hit.click();
              return true;
            })()`
         )
-        if (!clicked) results.push({ route, stage: 'click', warning: `未找到文本 ${clickText}` })
+        if (!clicked) results.push({ route, stage: 'click', warning: `未找到文本 ${text}` })
         await sleep(600)
       } catch (e) {
         results.push({ route, stage: 'click', error: String(e) })
       }
     }
     // 强制全量重绘：消除上一页残留的合成层
-    win.setSize(1401, 901)
+    win.setSize(winW + 1, winH + 1)
     win.webContents.invalidate()
     await sleep(120)
-    win.setSize(1400, 900)
+    win.setSize(winW, winH)
     win.webContents.invalidate()
     await sleep(320)
 

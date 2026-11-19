@@ -6,9 +6,7 @@ const routes: RouteRecordRaw[] = [
   { path: '/libraries', name: 'libraries', component: () => import('@renderer/views/LibrariesView.vue'), meta: { title: '受管目录', icon: 'folder' } },
   { path: '/scan', name: 'scan', component: () => import('@renderer/views/ScanView.vue'), meta: { title: '扫描', icon: 'scan' } },
   { path: '/review', name: 'review', component: () => import('@renderer/views/ReviewView.vue'), meta: { title: '待审', icon: 'checkmark' } },
-  { path: '/tags', name: 'tags', component: () => import('@renderer/views/TagsView.vue'), meta: { title: '标签体系', icon: 'pricetag' } },
-  
-  { path: '/settings', name: 'settings', component: () => import('@renderer/views/SettingsView.vue'), meta: { title: '设置', icon: 'settings' } }
+  { path: '/tags', name: 'tags', component: () => import('@renderer/views/TagsView.vue'), meta: { title: '标签体系', icon: 'pricetag' } }
 ]
 
 export default createRouter({

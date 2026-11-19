@@ -11,6 +11,7 @@ import AppTitlebar from './components/AppTitlebar.vue'
 import AppSidebar from './components/AppSidebar.vue'
 import AppStatusBar from './components/AppStatusBar.vue'
 import AppAssistant from './components/AppAssistant.vue'
+import SettingsDialog from './components/SettingsDialog.vue'
 import { refreshAppInfo } from './lib/appInfo'
 
 // 亮色 baseline：与 styles/_tokens.scss 中的 CSS 变量保持同一套色值
@@ -61,6 +62,7 @@ onMounted(refreshAppInfo)
             </div>
             <AppStatusBar />
             <AppAssistant />
+            <SettingsDialog />
           </div>
         </n-notification-provider>
       </n-dialog-provider>

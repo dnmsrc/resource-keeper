@@ -34,14 +34,33 @@ export interface DataDirInfo {
   defaultPath: string
 }
 
+export type ProtocolId = 'openai' | 'anthropic' | 'gemini'
+
+export interface ProtocolDef {
+  id: ProtocolId
+  label: string
+  /** false 的协议主进程还没实现，界面上禁用 */
+  available: boolean
+  desc: string
+}
+
+/** 模型目录里的一条：id 发给服务端，note 只给人看（比如「2折」） */
+export interface ModelEntry {
+  id: string
+  note?: string
+}
+
 /** 模型服务：对外只暴露 hasKey，不发明文 */
 export interface ProviderPublic {
   id: string
   label: string
   baseUrl: string
+  protocol: ProtocolId
+  /** 当前使用的模型，必在 models 里 */
   model: string
+  models: ModelEntry[]
   hasKey: boolean
-  /** 内置预设为 true；用户自己加的不显示「自定义」徽章以外的差别 */
+  /** 内置预设为 true；自定义的才允许删除 */
   preset: boolean
 }
 
@@ -62,7 +81,9 @@ export interface PresetDef {
 export interface ProviderPatch {
   label?: string
   baseUrl?: string
+  protocol?: ProtocolId
   model?: string
+  models?: ModelEntry[]
   apiKey?: string
 }
 
@@ -71,11 +92,18 @@ export interface TestOptions {
   baseUrl?: string
   model?: string
   apiKey?: string
+  protocol?: ProtocolId
 }
 
 export interface TestResult {
   ok: boolean
   message: string
+}
+
+export interface ModelsResult {
+  ok: boolean
+  message: string
+  models: string[]
 }
 
 const api = {
@@ -100,6 +128,7 @@ const api = {
     llm: {
       list: (): Promise<ProvidersState> => ipcRenderer.invoke('config:llm:list'),
       presets: (): Promise<PresetDef[]> => ipcRenderer.invoke('config:llm:presets'),
+      protocols: (): Promise<ProtocolDef[]> => ipcRenderer.invoke('config:llm:protocols'),
       /** presetId 走预设初始化；都不给则建一条空白自定义 */
       add: (input: { presetId?: string; label?: string }): Promise<ProvidersState> =>
         ipcRenderer.invoke('config:llm:add', input),
@@ -107,8 +136,15 @@ const api = {
         ipcRenderer.invoke('config:llm:update', id, patch),
       remove: (id: string): Promise<ProvidersState> => ipcRenderer.invoke('config:llm:remove', id),
       setActive: (id: string): Promise<ProvidersState> =>
-        ipcRenderer.invoke('config:llm:setActive', id)
-    }
+        ipcRenderer.invoke('config:llm:setActive', id),
+      /** 向端点要可用模型清单（保存前也能拉，传临时值即可） */
+      models: (opts?: Pick<TestOptions, 'id' | 'baseUrl' | 'apiKey'>): Promise<ModelsResult> =>
+        ipcRenderer.invoke('llm:models', opts ?? {})
+    },
+    /** 配置文件绝对路径（可能落在数据目录，界面不猜） */
+    path: (): Promise<string> => ipcRenderer.invoke('app:configPath'),
+    /** 在资源管理器里定位配置文件；返回空串表示成功 */
+    reveal: (): Promise<string> => ipcRenderer.invoke('app:revealConfig')
   },
 
   llm: {

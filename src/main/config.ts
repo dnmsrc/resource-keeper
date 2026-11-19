@@ -8,11 +8,14 @@
  * 文件被拷到别的机器/别的账号上解不开。
  *
  * 模型配置存成「列表 + 当前选中」：多接几家、随时切，比只存一条灵活。
+ * 每条下面还有一层「模型目录」——同一个端点往往能点出好几个模型（含带折扣的
+ * 同名变体），所以 model 记的是当前用哪个，models 记的是都能用哪些。
  * 旧版本存的是单条（llm.provider/baseUrl/model/apiKeyEnc），读到会自动迁移。
  */
 import { app, safeStorage } from 'electron'
 import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
+import { DEFAULT_PROTOCOL, isProtocolId, PROTOCOLS, type ProtocolDef, type ProtocolId } from './protocols'
 
 /** 内置预设：新装时直接列出来，用户只差填一个 key */
 export interface PresetDef {
@@ -54,14 +57,24 @@ export const PRESETS: PresetDef[] = [
   }
 ]
 
+/** 模型目录里的一条：id 发给服务端，note 只给人看（比如「2折」） */
+export interface ModelEntry {
+  id: string
+  note?: string
+}
+
 /** 主进程内部形态：带明文密钥，只在进程里出现 */
 export interface ProviderConfig {
   id: string
   label: string
   baseUrl: string
+  protocol: ProtocolId
+  /** 当前使用的模型，必须出现在 models 里 */
   model: string
+  /** 这个端点能用的模型清单 */
+  models: ModelEntry[]
   apiKey: string
-  /** 是不是内置预设（界面上用它决定要不要挂「自定义」徽章） */
+  /** 是不是内置预设（界面上用它决定要不要挂「自定义」徽章、能不能删） */
   preset: boolean
 }
 
@@ -70,7 +83,9 @@ export interface ProviderPublic {
   id: string
   label: string
   baseUrl: string
+  protocol: ProtocolId
   model: string
+  models: ModelEntry[]
   hasKey: boolean
   preset: boolean
 }
@@ -91,11 +106,18 @@ export interface DataDirInfo {
   defaultPath: string
 }
 
+interface StoredModel {
+  id?: string
+  note?: string
+}
+
 interface StoredProvider {
   id?: string
   label?: string
   baseUrl?: string
+  protocol?: string
   model?: string
+  models?: StoredModel[]
   apiKeyEnc?: string
   preset?: boolean
 }
@@ -189,9 +211,23 @@ function defaultProviders(): StoredProvider[] {
     id: p.id,
     label: p.label,
     baseUrl: p.baseUrl,
+    protocol: DEFAULT_PROTOCOL,
     model: p.model,
+    models: [{ id: p.model }],
     preset: true
   }))
+}
+
+/** 把磁盘上的一条整理成模型目录：老配置只有单个 model，就补成一条 */
+function normalizeModels(raw: StoredProvider): ModelEntry[] {
+  const list = Array.isArray(raw.models)
+    ? raw.models
+        .map((m) => ({ id: (m?.id ?? '').trim(), ...(m?.note?.trim() ? { note: m.note.trim() } : {}) }))
+        .filter((m) => m.id)
+    : []
+  if (list.length) return list
+  const single = (raw.model ?? '').trim()
+  return single ? [{ id: single }] : []
 }
 
 /**
@@ -213,7 +249,9 @@ function normalize(): { providers: ProviderConfig[]; activeId: string; needSave:
         id: preset?.id ?? llm.provider ?? 'openai',
         label: preset?.label ?? llm.provider ?? 'OpenAI',
         baseUrl: llm.baseUrl ?? preset?.baseUrl ?? PRESETS[0].baseUrl,
+        protocol: DEFAULT_PROTOCOL,
         model: llm.model ?? preset?.model ?? PRESETS[0].model,
+        models: [{ id: llm.model ?? preset?.model ?? PRESETS[0].model }],
         apiKeyEnc: llm.apiKeyEnc,
         preset: !!preset
       }
@@ -224,14 +262,23 @@ function normalize(): { providers: ProviderConfig[]; activeId: string; needSave:
     needSave = true
   }
 
-  const providers = raw.map((p) => ({
-    id: p.id ?? `custom-${Math.random().toString(36).slice(2, 8)}`,
-    label: p.label ?? p.id ?? '未命名',
-    baseUrl: p.baseUrl ?? '',
-    model: p.model ?? '',
-    apiKey: p.apiKeyEnc ? decrypt(p.apiKeyEnc) : '',
-    preset: !!p.preset
-  }))
+  const providers = raw.map((p) => {
+    const models = normalizeModels(p)
+    const declared = (p.model ?? '').trim()
+    // 当前模型必须落在目录里：老配置里 model 可能只有一项，补进去
+    if (declared && !models.some((m) => m.id === declared)) models.unshift({ id: declared })
+
+    return {
+      id: p.id ?? `custom-${Math.random().toString(36).slice(2, 8)}`,
+      label: p.label ?? p.id ?? '未命名',
+      baseUrl: p.baseUrl ?? '',
+      protocol: isProtocolId(p.protocol) ? p.protocol : DEFAULT_PROTOCOL,
+      model: declared || models[0]?.id || '',
+      models,
+      apiKey: p.apiKeyEnc ? decrypt(p.apiKeyEnc) : '',
+      preset: !!p.preset
+    }
+  })
 
   const activeId =
     llm.activeId && providers.some((p) => p.id === llm.activeId)
@@ -249,7 +296,9 @@ function persist(providers: ProviderConfig[], activeId: string): void {
       id: p.id,
       label: p.label,
       baseUrl: p.baseUrl,
+      protocol: p.protocol,
       model: p.model,
+      models: p.models.map((m) => (m.note ? { id: m.id, note: m.note } : { id: m.id })),
       preset: p.preset,
       ...(p.apiKey ? { apiKeyEnc: encrypt(p.apiKey) } : {})
     }))
@@ -268,7 +317,9 @@ function toPublic(p: ProviderConfig): ProviderPublic {
     id: p.id,
     label: p.label,
     baseUrl: p.baseUrl,
+    protocol: p.protocol,
     model: p.model,
+    models: p.models,
     hasKey: !!p.apiKey,
     preset: p.preset
   }
@@ -291,6 +342,27 @@ export function presetList(): PresetDef[] {
   return PRESETS
 }
 
+export function protocolList(): ProtocolDef[] {
+  return PROTOCOLS
+}
+
+/** 配置文件的绝对路径；「打开配置文件」按钮用它 */
+export function configPath(): string {
+  return configFile()
+}
+
+/**
+ * 把配置落到磁盘并把文件建出来。
+ * 只读路径（比如从没写过配置）时文件并不存在，资源管理器里定位不到，
+ * 所以定位之前先确保它存在。
+ */
+export function ensureConfigFile(): string {
+  const p = configFile()
+  // 读出再写回：目录不存在、文件不存在两种情况都会在这里补齐
+  writeStored(readStored())
+  return p
+}
+
 /** 添加一条：给预设 id 就按预设初始化，否则建一条空白自定义 */
 export function addProvider(input: { presetId?: string; label?: string }): ProvidersState {
   const { providers, activeId } = loadProviders()
@@ -303,7 +375,9 @@ export function addProvider(input: { presetId?: string; label?: string }): Provi
     id,
     label: preset?.label ?? input.label?.trim() ?? '自定义提供商',
     baseUrl: preset?.baseUrl ?? '',
+    protocol: DEFAULT_PROTOCOL,
     model: preset?.model ?? '',
+    models: preset?.model ? [{ id: preset.model }] : [],
     apiKey: '',
     preset: !!preset
   }
@@ -311,21 +385,43 @@ export function addProvider(input: { presetId?: string; label?: string }): Provi
   return providersState()
 }
 
-/** apiKey 传空串表示「不修改已保存的 key」 */
+/**
+ * 改一条。apiKey 传空串/不传都表示「不修改已保存的 key」——
+ * 界面上密钥框默认是空的，占位写「留空使用已保存凭据」。
+ */
 export function updateProvider(
   id: string,
-  patch: Partial<Pick<ProviderConfig, 'label' | 'baseUrl' | 'model' | 'apiKey'>>
+  patch: Partial<Pick<ProviderConfig, 'label' | 'baseUrl' | 'protocol' | 'model' | 'models' | 'apiKey'>>
 ): ProvidersState {
   const { providers, activeId } = loadProviders()
   const idx = providers.findIndex((p) => p.id === id)
   if (idx < 0) return providersState()
 
   const cur = providers[idx]
+
+  // 模型目录：界面传什么就以什么为准，去掉空行和重复 id
+  const seen = new Set<string>()
+  const models: ModelEntry[] = (patch.models ?? cur.models)
+    .map((m) => ({ id: (m.id ?? '').trim(), ...(m.note?.trim() ? { note: m.note.trim() } : {}) }))
+    .filter((m) => {
+      if (!m.id || seen.has(m.id)) return false
+      seen.add(m.id)
+      return true
+    })
+
+  const requested = (patch.model ?? cur.model).trim()
+  let model = models.some((m) => m.id === requested) ? requested : (models[0]?.id ?? '')
+  // 目录被清空但还留着当前模型：补回去，避免「配了却调不动」
+  if (!models.length && requested) models.push({ id: requested })
+  if (!model) model = models[0]?.id ?? ''
+
   providers[idx] = {
     ...cur,
     label: patch.label?.trim() || cur.label,
     baseUrl: (patch.baseUrl ?? cur.baseUrl).trim(),
-    model: (patch.model ?? cur.model).trim(),
+    protocol: patch.protocol && isProtocolId(patch.protocol) ? patch.protocol : cur.protocol,
+    model,
+    models,
     apiKey: patch.apiKey?.trim() || cur.apiKey
   }
   persist(providers, activeId)
@@ -354,6 +450,11 @@ function ensureDir(dir: string): boolean {
   } catch {
     return false
   }
+}
+
+/** 内置预设的默认模型：编辑面板里「恢复默认模型」用 */
+export function presetModelOf(id: string): string {
+  return PRESETS.find((p) => p.id === id)?.model ?? ''
 }
 
 /**

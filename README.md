@@ -8,10 +8,11 @@
 
 ## 现在到哪一步了
 
-当前是 **阶段 0：界面骨架**。所有页面、导航、视觉体系、IPC 通道都已跑通，数据是占位数据。
+当前是 **阶段 0：界面骨架**。所有页面、导航、视觉体系、IPC 通道都已跑通，数据是占位数据；模型接入的配置层（阶段 2 的前半）已经就位，对话本身还没接。
 
 - ✅ Electron + Vue 3 + TS + Sass 骨架，构建 / 类型检查通过
-- ✅ 6 个页面：总览、受管目录、扫描、待审、标签体系、设置
+- ✅ 5 个页面 + 设置弹窗：总览、受管目录、扫描、待审、标签体系；设置是盖在窗口上的浮层，不占路由
+- ✅ 模型接入：多家提供商并存可切，密钥 DPAPI 加密落盘，带连通性测试、模型目录与「获取可用模型」
 - ✅ 悬浮助手：右下角常驻，任意页面唤起，话术随当前页面切换（当前只有 UI，未接模型）
 - ✅ 主进程 / 渲染进程 IPC 通道搭好（`app:info`、`db:overview`、窗口控制）
 - ⬜ 真实扫描（文件遍历、容器识别、哈希采样）
@@ -35,7 +36,7 @@
 |---|---|
 | ![标签体系](docs/screenshots/tags.png) | ![悬浮助手](docs/screenshots/assistant.png) |
 
-设置页见 [docs/screenshots/settings.png](docs/screenshots/settings.png)。
+设置弹窗见 [提供商列表](docs/screenshots/settings.png) 与 [行内编辑面板](docs/screenshots/settings-model.png)。
 
 ---
 
@@ -71,8 +72,8 @@ resource-keeper/
 │           ├── App.vue        # 布局外壳：标题栏 / 侧栏 / 内容区
 │           ├── router/        # 页面路由
 │           ├── styles/        # _tokens.scss 设计令牌 + main.scss 全局样式
-│           ├── components/    # AppTitlebar / AppSidebar / AppAssistant / StatCard
-│           └── views/         # 6 个页面
+│           ├── components/    # AppTitlebar / AppSidebar / AppAssistant / SettingsDialog / StatCard
+│           └── views/         # 5 个页面
 ├── scripts/check-layout.cjs   # 开发用：Electron 实测布局尺寸 + 逐页截图
 ├── electron.vite.config.ts
 ├── electron-builder.yml

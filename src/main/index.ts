@@ -3,15 +3,18 @@ import { mkdirSync } from 'node:fs'
 import { join } from 'node:path'
 import {
   addProvider,
+  configPath,
   dataDirInfo,
+  ensureConfigFile,
   presetList,
+  protocolList,
   providersState,
   removeProvider,
   setActiveProvider,
   setDataDir,
   updateProvider
 } from './config'
-import { testConnection } from './llm'
+import { listModels, testConnection } from './llm'
 
 app.setName('resource-keeper')
 
@@ -121,12 +124,21 @@ function registerIpc(): void {
   // 全部只回 hasKey，明文 key 不出主进程
   ipcMain.handle('config:llm:list', () => providersState())
   ipcMain.handle('config:llm:presets', () => presetList())
+  ipcMain.handle('config:llm:protocols', () => protocolList())
   ipcMain.handle('config:llm:add', (_e, input) => addProvider(input ?? {}))
   ipcMain.handle('config:llm:update', (_e, id: string, patch) => updateProvider(id, patch ?? {}))
   ipcMain.handle('config:llm:remove', (_e, id: string) => removeProvider(id))
   ipcMain.handle('config:llm:setActive', (_e, id: string) => setActiveProvider(id))
 
   ipcMain.handle('llm:test', (_e, opts) => testConnection(opts ?? {}))
+  ipcMain.handle('llm:models', (_e, opts) => listModels(opts ?? {}))
+
+  // 「打开配置文件」：路径由主进程决定（可能退到数据目录），界面不猜
+  ipcMain.handle('app:configPath', () => configPath())
+  ipcMain.handle('app:revealConfig', () => {
+    shell.showItemInFolder(ensureConfigFile())
+    return ''
+  })
 
   // 占位：阶段 1 接入真实 SQLite 台账
   ipcMain.handle('db:overview', () => ({
