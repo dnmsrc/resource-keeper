@@ -26,7 +26,8 @@ defineProps<{
   position: relative;
   border: 1px solid var(--line);
   border-radius: var(--radius-lg);
-  background: linear-gradient(155deg, rgba(26, 30, 41, 0.95), rgba(21, 24, 33, 0.95));
+  background: var(--panel-grad);
+  box-shadow: var(--shadow-1);
   padding: 15px 16px 14px;
   overflow: hidden;
   transition: transform 0.16s, border-color 0.16s;
@@ -34,7 +35,7 @@ defineProps<{
 
 .stat:hover {
   transform: translateY(-1px);
-  border-color: var(--panel-3);
+  border-color: var(--line-strong);
 }
 
 .stat::after {
@@ -45,14 +46,14 @@ defineProps<{
   height: 120px;
   border-radius: 50%;
   filter: blur(28px);
-  opacity: 0.5;
+  opacity: 0.3;
   pointer-events: none;
 }
 
-.violet::after { background: rgba(124, 92, 255, 0.5); }
-.cyan::after { background: rgba(34, 211, 238, 0.42); }
-.green::after { background: rgba(52, 211, 153, 0.38); }
-.amber::after { background: rgba(251, 191, 36, 0.35); }
+.violet::after { background: rgba(98, 80, 240, 0.32); }
+.cyan::after { background: rgba(13, 159, 191, 0.28); }
+.green::after { background: rgba(15, 159, 110, 0.24); }
+.amber::after { background: rgba(180, 83, 9, 0.18); }
 
 .top {
   display: flex;

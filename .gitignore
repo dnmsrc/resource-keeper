@@ -9,3 +9,7 @@ resources/bin/
 config.json
 .env
 .vite/
+# 开发产物（截图脚本输出，不进版本库）
+scripts/shot-*.png
+scripts/layout-report.json
+.tmp-shot/

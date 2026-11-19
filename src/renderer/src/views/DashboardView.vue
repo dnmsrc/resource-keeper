@@ -137,7 +137,7 @@ const todos = ref([
   padding: 10px 12px;
   border: 1px solid var(--line-soft);
   border-radius: 12px;
-  background: rgba(255, 255, 255, 0.015);
+  background: var(--hover);
 }
 
 .lib-icon {
@@ -153,9 +153,9 @@ const todos = ref([
   height: 16px;
 }
 
-.violet .lib-icon { background: rgba(124, 92, 255, 0.16); color: #b9a8ff; }
-.cyan .lib-icon { background: rgba(34, 211, 238, 0.14); color: #8ee9fb; }
-.amber .lib-icon { background: rgba(251, 191, 36, 0.14); color: #f5d27a; }
+.violet .lib-icon { background: rgba(98, 80, 240, 0.12); color: #4634d6; }
+.cyan .lib-icon { background: rgba(13, 159, 191, 0.12); color: #0a7d96; }
+.amber .lib-icon { background: rgba(180, 83, 9, 0.1); color: #9a5b12; }
 
 .lib-name {
   font-size: 13.5px;
@@ -208,7 +208,7 @@ const todos = ref([
   height: 14px;
   border-radius: 5px;
   border: 1px solid var(--line);
-  background: rgba(255, 255, 255, 0.02);
+  background: var(--hover);
 }
 
 .todo li.done .tick {

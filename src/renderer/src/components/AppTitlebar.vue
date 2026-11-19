@@ -54,7 +54,7 @@ onMounted(async () => {
   gap: 12px;
   padding: 0 152px 0 16px; /* 右侧给系统按钮留位 */
   border-bottom: 1px solid var(--line-soft);
-  background: rgba(14, 16, 21, 0.72);
+  background: var(--glass);
   backdrop-filter: blur(12px);
   -webkit-app-region: drag;
   user-select: none;
@@ -72,9 +72,9 @@ onMounted(async () => {
   border-radius: 8px;
   display: grid;
   place-items: center;
-  color: #d9d5ff;
-  background: linear-gradient(140deg, rgba(124, 92, 255, 0.9), rgba(34, 211, 238, 0.55));
-  box-shadow: 0 4px 14px rgba(124, 92, 255, 0.35);
+  color: #fff;
+  background: linear-gradient(140deg, #6d5bf4, #0fa8c8);
+  box-shadow: 0 4px 12px rgba(98, 80, 240, 0.26);
 }
 
 .name {
@@ -99,7 +99,7 @@ onMounted(async () => {
   padding: 3px 12px;
   border: 1px solid var(--line-soft);
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.02);
+  background: var(--hover);
 }
 
 .right {
@@ -117,8 +117,8 @@ onMounted(async () => {
   letter-spacing: 0.08em;
   padding: 2px 7px;
   border-radius: 6px;
-  color: #0b1220;
-  background: linear-gradient(120deg, #7c5cff, #22d3ee);
+  color: #fff;
+  background: linear-gradient(120deg, #6250f0, #0d9fbf);
   font-weight: 700;
 }
 </style>

@@ -1,6 +1,8 @@
 import { app, BrowserWindow, ipcMain, shell } from 'electron'
 import { join } from 'node:path'
 
+app.setName('resource-keeper')
+
 const isDev = !app.isPackaged
 
 function createWindow(): BrowserWindow {
@@ -11,11 +13,11 @@ function createWindow(): BrowserWindow {
     minHeight: 680,
     show: false,
     autoHideMenuBar: true,
-    backgroundColor: '#0e1015',
+    backgroundColor: '#f5f6fa',
     titleBarStyle: 'hidden',
     titleBarOverlay: {
-      color: '#0e1015',
-      symbolColor: '#9aa0b4',
+      color: '#f5f6fa',
+      symbolColor: '#5a6478',
       height: 44
     },
     webPreferences: {

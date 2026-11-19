@@ -23,20 +23,20 @@ body {
   overflow: hidden;
 }
 
-// 顶部氛围光
+// 顶部氛围光（亮色下要极淡，只负责给冷灰底一点方向感）
 body::before {
   content: '';
   position: fixed;
   inset: 0;
   pointer-events: none;
   background:
-    radial-gradient(800px 320px at 18% -8%, rgba(124, 92, 255, 0.16), transparent 60%),
-    radial-gradient(600px 240px at 92% -10%, rgba(34, 211, 238, 0.1), transparent 60%);
+    radial-gradient(900px 340px at 16% -12%, var(--glow-violet), transparent 62%),
+    radial-gradient(700px 260px at 94% -14%, var(--glow-cyan), transparent 62%);
   z-index: 0;
 }
 
 a {
-  color: var(--accent-2);
+  color: var(--accent);
   text-decoration: none;
 }
 
@@ -46,13 +46,13 @@ a {
   height: 10px;
 }
 ::-webkit-scrollbar-thumb {
-  background: #2a2f3f;
+  background: var(--scrollbar);
   border-radius: 999px;
   border: 2px solid transparent;
   background-clip: content-box;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #39405a;
+  background: var(--scrollbar-hover);
   background-clip: content-box;
 }
 ::-webkit-scrollbar-track {

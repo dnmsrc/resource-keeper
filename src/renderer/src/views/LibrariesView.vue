@@ -152,8 +152,8 @@ function remove(id: number): void {
   border-radius: 10px;
   display: grid;
   place-items: center;
-  background: rgba(124, 92, 255, 0.16);
-  color: #b9a8ff;
+  background: rgba(98, 80, 240, 0.12);
+  color: #4634d6;
 }
 
 .lib-icon :deep(svg) {

@@ -4,44 +4,44 @@ import {
   NMessageProvider,
   NDialogProvider,
   NNotificationProvider,
-  darkTheme,
   type GlobalThemeOverrides
 } from 'naive-ui'
 import AppTitlebar from './components/AppTitlebar.vue'
 import AppSidebar from './components/AppSidebar.vue'
 
+// 亮色 baseline：与 styles/_tokens.scss 中的 CSS 变量保持同一套色值
 const themeOverrides: GlobalThemeOverrides = {
   common: {
-    primaryColor: '#7c5cff',
-    primaryColorHover: '#8f74ff',
-    primaryColorPressed: '#6b4bf0',
-    primaryColorSuppl: '#7c5cff',
-    infoColor: '#22d3ee',
-    successColor: '#34d399',
-    warningColor: '#fbbf24',
-    errorColor: '#f87171',
-    bodyColor: '#0e1015',
-    cardColor: '#151821',
-    modalColor: '#151821',
-    popoverColor: '#1a1e29',
-    tableColor: '#151821',
-    inputColor: '#12151c',
-    borderColor: '#262b38',
-    dividerColor: '#1f2431',
-    textColorBase: '#e7e9f2',
-    textColor1: '#e7e9f2',
-    textColor2: '#a7adc0',
-    textColor3: '#6f7688',
+    primaryColor: '#6250f0',
+    primaryColorHover: '#7a6bff',
+    primaryColorPressed: '#4a38d9',
+    primaryColorSuppl: '#6250f0',
+    infoColor: '#0d9fbf',
+    successColor: '#0f9f6e',
+    warningColor: '#b45309',
+    errorColor: '#dc2626',
+    bodyColor: '#f5f6fa',
+    cardColor: '#ffffff',
+    modalColor: '#ffffff',
+    popoverColor: '#ffffff',
+    tableColor: '#ffffff',
+    inputColor: '#ffffff',
+    borderColor: '#e4e8f0',
+    dividerColor: '#eef1f7',
+    textColorBase: '#1b2130',
+    textColor1: '#1b2130',
+    textColor2: '#5a6478',
+    textColor3: '#8a93a6',
     borderRadius: '10px',
     fontFamily: "'Inter','Segoe UI','Microsoft YaHei',system-ui,sans-serif"
   },
   Card: { borderRadius: '14px' },
-  DataTable: { thColor: '#12151c', tdColor: '#151821', thTextColor: '#a7adc0' }
+  DataTable: { thColor: '#f7f8fc', tdColor: '#ffffff', thTextColor: '#5a6478' }
 }
 </script>
 
 <template>
-  <n-config-provider :theme="darkTheme" :theme-overrides="themeOverrides">
+  <n-config-provider :theme-overrides="themeOverrides">
     <n-message-provider>
       <n-dialog-provider>
         <n-notification-provider>

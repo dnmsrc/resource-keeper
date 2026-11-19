@@ -77,7 +77,7 @@ function go(path: string): void {
   width: var(--sidebar-w);
   flex: 0 0 var(--sidebar-w);
   border-right: 1px solid var(--line-soft);
-  background: linear-gradient(180deg, rgba(21, 24, 33, 0.9), rgba(14, 16, 21, 0.9));
+  background: var(--sidebar-grad);
   display: flex;
   flex-direction: column;
   padding: 14px 12px;
@@ -109,13 +109,13 @@ function go(path: string): void {
 
 .nav-item:hover {
   color: var(--text);
-  background: rgba(255, 255, 255, 0.035);
+  background: var(--hover-2);
 }
 
 .nav-item.on {
-  color: #fff;
-  background: linear-gradient(100deg, rgba(124, 92, 255, 0.22), rgba(34, 211, 238, 0.08));
-  border-color: rgba(124, 92, 255, 0.35);
+  color: var(--nav-active-text);
+  background: linear-gradient(100deg, rgba(98, 80, 240, 0.12), rgba(13, 159, 191, 0.06));
+  border-color: var(--nav-active-border);
 }
 
 .icon {
@@ -144,8 +144,8 @@ function go(path: string): void {
 }
 
 .nav-item.on .dot {
-  background: var(--accent-2);
-  box-shadow: 0 0 10px var(--accent-2);
+  background: var(--accent);
+  box-shadow: 0 0 8px rgba(98, 80, 240, 0.45);
 }
 
 .foot {

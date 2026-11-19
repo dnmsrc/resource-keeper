@@ -11,12 +11,20 @@
  *     SHOT_APP=1 SHOT_PAGES=dashboard,chat \
  *       ./node_modules/electron/dist/electron.exe --no-sandbox scripts/check-layout.cjs
  *
+ * 踩过的坑（两个都跟 show:false + 无 GPU 有关，别删）：
+ *  - 同一窗口连续切路由，合成器不重绘固定层，侧栏会残留上一页的边框。所以每页都做一次
+ *    resize 抖动 + invalidate 强制全量重绘，再截图。
+ *  - 每页新建 BrowserWindow 会在本机（无桌面会话）让第二个窗口起不来，进程直接退出。
+ *    因此全程复用一个窗口。
+ *
  * 产物：layout-report.json（每个页面的元素真实尺寸 + 内部滚动溢出清单）、shot-<页面>.png
  * 原理：直接读 getBoundingClientRect / scrollHeight，比看截图猜更准。
  */
 const { app, BrowserWindow, ipcMain } = require('electron')
 const fs = require('node:fs')
 const path = require('node:path')
+
+app.setName('resource-keeper')
 
 const useApp = process.env.SHOT_APP === '1'
 const base = process.env.SHOT_BASE || 'http://127.0.0.1:8756/'
@@ -97,6 +105,8 @@ const measure = `(() => {
   };
 })()`
 
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
+
 app.whenReady().then(async () => {
   if (useApp) registerIpcStubs()
 
@@ -104,7 +114,7 @@ app.whenReady().then(async () => {
     width: 1400,
     height: 900,
     show: false,
-    backgroundColor: '#0e1015',
+    backgroundColor: '#f5f6fa',
     webPreferences: useApp
       ? { preload: preloadJs, sandbox: false, contextIsolation: true, nodeIntegration: false }
       : { offscreen: false }
@@ -122,7 +132,15 @@ app.whenReady().then(async () => {
       results.push({ route, stage: 'load', error: String(e) })
       continue
     }
-    await new Promise((r) => setTimeout(r, 1500))
+    await sleep(900)
+    // 强制全量重绘：消除上一页残留的合成层
+    win.setSize(1401, 901)
+    win.webContents.invalidate()
+    await sleep(120)
+    win.setSize(1400, 900)
+    win.webContents.invalidate()
+    await sleep(320)
+
     try {
       const metrics = await win.webContents.executeJavaScript(measure)
       const img = await win.webContents.capturePage()

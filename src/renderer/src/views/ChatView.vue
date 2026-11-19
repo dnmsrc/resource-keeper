@@ -111,7 +111,7 @@ async function send(text?: string): Promise<void> {
   min-height: 0;
   border: 1px solid var(--line);
   border-radius: var(--radius-lg);
-  background: linear-gradient(180deg, rgba(21, 24, 33, 0.9), rgba(14, 16, 21, 0.9));
+  background: var(--chat-panel-grad);
   overflow: hidden;
 }
 
@@ -147,8 +147,8 @@ async function send(text?: string): Promise<void> {
 }
 
 .assistant .avatar {
-  background: linear-gradient(140deg, rgba(124, 92, 255, 0.9), rgba(34, 211, 238, 0.5));
-  color: #0b1220;
+  background: linear-gradient(140deg, #6d5bf4, #0fa8c8);
+  color: #fff;
 }
 
 .user .avatar {
@@ -160,12 +160,13 @@ async function send(text?: string): Promise<void> {
   border: 1px solid var(--line-soft);
   border-radius: 12px;
   padding: 10px 13px;
-  background: rgba(255, 255, 255, 0.02);
+  background: var(--panel);
+  box-shadow: var(--shadow-1);
 }
 
 .user .bubble {
-  background: rgba(124, 92, 255, 0.12);
-  border-color: rgba(124, 92, 255, 0.28);
+  background: var(--accent-soft);
+  border-color: rgba(98, 80, 240, 0.26);
 }
 
 .text {
@@ -212,7 +213,7 @@ async function send(text?: string): Promise<void> {
 
 .chip {
   border: 1px solid var(--line);
-  background: rgba(255, 255, 255, 0.02);
+  background: var(--hover);
   color: var(--text-2);
   border-radius: 999px;
   padding: 5px 11px;
@@ -224,8 +225,8 @@ async function send(text?: string): Promise<void> {
 
 .chip:hover {
   color: var(--text);
-  border-color: var(--panel-3);
-  background: rgba(124, 92, 255, 0.1);
+  border-color: var(--line-strong);
+  background: var(--accent-soft);
 }
 
 .composer {
@@ -234,6 +235,6 @@ async function send(text?: string): Promise<void> {
   align-items: flex-end;
   padding: 12px 14px;
   border-top: 1px solid var(--line-soft);
-  background: rgba(10, 12, 17, 0.6);
+  background: var(--composer-bg);
 }
 </style>

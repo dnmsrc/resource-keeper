@@ -45,7 +45,7 @@
 | 桌面容器 | **Electron** | 你熟；跨 Win/mac/Linux；`contextIsolation + preload` 能给渲染层最小权限 API，避免把 `fs` 直接暴露给页面 |
 | 前端框架 | **Vue 3 + TypeScript** | 你熟；组合式 API 写交互（扫描进度、对话流）比选项式清楚；TS 让 IPC 的请求/响应结构在编译期就能对齐 |
 | 样式 | **Sass + CSS 变量** | 设计令牌（颜色/间距/圆角）集中在 `_tokens.scss`，后面换主题只改一处 |
-| 组件库 | **Naive UI** | 原生 TS 支持最好、暗色主题开箱即用、不需要额外样式文件注入；表格/表单/树这些重组件齐全，且体积比 Element Plus 小 |
+| 组件库 | **Naive UI** | 原生 TS 支持最好、主题变量开箱即用（当前走亮色基线）、不需要额外样式文件注入；表格/表单/树这些重组件齐全，且体积比 Element Plus 小 |
 | 构建 | **electron-vite** | 主进程/preload/渲染进程三套构建一次配好，HMR 直接可用，打包产物结构和 electron-builder 天然对齐 |
 | 状态 | **Pinia** | 受管目录、扫描会话、标签体系都是跨页面共享状态，集中放 store 比 props 层层传干净 |
 | 路由 | **vue-router（hash 模式）** | Electron 里用 `file://` 加载页面，hash 路由不需要配置 history fallback |

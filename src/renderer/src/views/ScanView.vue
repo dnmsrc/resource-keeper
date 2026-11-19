@@ -154,7 +154,7 @@ onUnmounted(stop)
   border: 1px solid var(--line-soft);
   border-radius: 10px;
   padding: 9px 11px;
-  background: rgba(255, 255, 255, 0.015);
+  background: var(--hover);
 }
 
 .counter .k {
@@ -171,7 +171,7 @@ onUnmounted(stop)
 .log {
   height: 300px;
   overflow: auto;
-  background: #0c0e13;
+  background: var(--panel-3);
   border: 1px solid var(--line-soft);
   border-radius: 10px;
   padding: 10px 12px;
@@ -180,7 +180,7 @@ onUnmounted(stop)
 }
 
 .log .line {
-  color: #9fb0c8;
+  color: var(--text-2);
   white-space: pre-wrap;
   word-break: break-all;
 }

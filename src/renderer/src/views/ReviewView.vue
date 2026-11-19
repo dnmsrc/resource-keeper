@@ -167,7 +167,7 @@ function batch(action: 'keep' | 'trash'): void {
 }
 
 .tr:hover {
-  background: rgba(255, 255, 255, 0.02);
+  background: var(--hover);
 }
 
 .c-name {
