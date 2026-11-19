@@ -2,7 +2,9 @@
 /**
  * 设置弹窗。
  *
- * 形态参照桌面客户端：盖住整个窗口，左边一列竖排分节，右边是内容。
+ * 居中弹在窗口上层（带遮罩），不铺满窗口 —— 背后的界面还看得见，
+ * 点遮罩空白处 / 右上角 ✕ / Esc 都能退出来。
+ * 分节不放左侧竖排菜单，收成标题旁的图标切换。
  * 模型分节里「编辑」是行内展开的一整块面板，不是再弹一层小窗 ——
  * 一张面板里同时能改名称/地址/协议/密钥/模型目录，改完保存才落盘。
  *
@@ -344,10 +346,25 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown))
 <template>
   <Teleport to="body">
     <Transition name="dlg">
-      <div v-if="settings.open" class="mask">
+      <div v-if="settings.open" class="mask" @click.self="close">
         <div class="dialog">
           <header class="dlg-head">
             <h1 class="dlg-title">设置</h1>
+            <div class="tabs" role="tablist">
+              <button
+                v-for="s in sections"
+                :key="s.id"
+                class="tab"
+                :class="{ on: settings.section === s.id }"
+                role="tab"
+                :aria-selected="settings.section === s.id"
+                :title="s.label"
+                :aria-label="s.label"
+                @click="settings.section = s.id"
+              >
+                <component :is="s.icon" />
+              </button>
+            </div>
             <div class="head-ops">
               <button class="ghost-btn" @click="revealConfig">打开配置文件</button>
               <button class="icon-btn" title="关闭（Esc）" @click="close">
@@ -356,21 +373,7 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown))
             </div>
           </header>
 
-          <div class="dlg-body">
-            <nav class="dlg-nav">
-              <button
-                v-for="s in sections"
-                :key="s.id"
-                class="nav-item"
-                :class="{ on: settings.section === s.id }"
-                @click="settings.section = s.id"
-              >
-                <span class="nav-icon"><component :is="s.icon" /></span>
-                <span>{{ s.label }}</span>
-              </button>
-            </nav>
-
-            <div class="dlg-main">
+          <div class="dlg-main">
               <!-- ============ 模型 ============ -->
               <section v-if="settings.section === 'model'" class="sec">
                 <h2 class="sec-title">模型</h2>
@@ -561,7 +564,6 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown))
                   </p>
                 </div>
               </section>
-            </div>
           </div>
         </div>
       </div>
@@ -574,34 +576,84 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown))
   position: fixed;
   inset: 0;
   z-index: 100;
-  background: rgba(15, 20, 32, 0.34);
+  /* 点遮罩空白处也能关：编辑面板里的点击不会冒泡到这里 */
+  background: rgba(15, 20, 32, 0.32);
   backdrop-filter: blur(2px);
-  display: flex;
+  display: grid;
+  place-items: center;
+  /* 顶部让开标题栏和右上角窗口按钮，右侧同理，弹窗不压住它们 */
+  padding: 58px 56px 60px;
 }
 
 .dialog {
-  flex: 1;
+  width: min(900px, 100%);
+  /* 高度跟着内容走：列表态不空一大截，编辑展开到上限后在弹窗内滚动 */
+  max-height: min(760px, 100%);
   display: flex;
   flex-direction: column;
   min-width: 0;
   background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  box-shadow: var(--shadow-2);
   overflow: hidden;
 }
 
 .dlg-head {
   flex: 0 0 auto;
-  height: 58px;
+  height: 56px;
   display: flex;
   align-items: center;
-  padding: 0 16px 0 24px;
+  gap: 14px;
+  padding: 0 14px 0 22px;
   border-bottom: 1px solid var(--line-soft);
 }
 
 .dlg-title {
   margin: 0;
-  font-size: 17px;
+  font-size: 16.5px;
   font-weight: 650;
   letter-spacing: 0.2px;
+}
+
+/* 分节切换：只留图标，悬停/选中给反馈 */
+.tabs {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px;
+  border: 1px solid var(--line-soft);
+  border-radius: 9px;
+  background: var(--panel-2);
+}
+
+.tab {
+  width: 30px;
+  height: 26px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--text-3);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.tab :deep(svg) {
+  width: 17px;
+  height: 17px;
+}
+
+.tab:hover {
+  color: var(--text);
+  background: var(--hover-2);
+}
+
+.tab.on {
+  background: var(--panel);
+  color: var(--accent);
+  box-shadow: var(--shadow-1);
 }
 
 .head-ops {
@@ -652,66 +704,12 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown))
   color: var(--text);
 }
 
-.dlg-body {
-  flex: 1;
-  display: flex;
-  min-height: 0;
-}
-
-.dlg-nav {
-  flex: 0 0 178px;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  padding: 12px 12px;
-  border-right: 1px solid var(--line-soft);
-}
-
-.nav-item {
-  display: flex;
-  align-items: center;
-  gap: 9px;
-  height: 36px;
-  padding: 0 10px;
-  border: 0;
-  border-radius: 8px;
-  background: transparent;
-  color: var(--text-2);
-  font: inherit;
-  font-size: 13.5px;
-  text-align: left;
-  cursor: pointer;
-  transition: background 0.15s, color 0.15s;
-}
-
-.nav-item:hover {
-  background: var(--hover);
-  color: var(--text);
-}
-
-.nav-item.on {
-  background: var(--panel-3);
-  color: var(--text);
-  font-weight: 600;
-}
-
-.nav-icon {
-  width: 17px;
-  height: 17px;
-  display: grid;
-  place-items: center;
-}
-
-.nav-icon :deep(svg) {
-  width: 17px;
-  height: 17px;
-}
-
 .dlg-main {
   flex: 1;
+  min-height: 0;
   min-width: 0;
   overflow-y: auto;
-  padding: 22px 28px 40px;
+  padding: 22px 28px 18px;
 }
 
 .sec {
@@ -1048,12 +1046,18 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown))
 }
 
 .epanel-foot {
+  /* 面板比弹窗高时要滚动，保存按钮得一直够得着 */
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
   display: flex;
   align-items: center;
   gap: 8px;
-  margin-top: 16px;
-  padding-top: 13px;
+  margin: 16px -18px -14px;
+  padding: 13px 18px 14px;
   border-top: 1px solid var(--line);
+  border-radius: 0 0 10px 10px;
+  background: var(--panel-3);
 }
 
 .grow {

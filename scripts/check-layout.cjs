@@ -44,6 +44,15 @@ const clickTexts = (process.env.SHOT_CLICK_TEXT || '')
   .split(',')
   .map((s) => s.trim())
   .filter(Boolean)
+// 可选：按显式选择器依次点击（逗号分隔）。比按文本点更准，可用于「点遮罩」「切图标 tab」
+const clickSels = (process.env.SHOT_CLICKS || '')
+  .split(',')
+  .map((s) => s.trim())
+  .filter(Boolean)
+// 可选：截图前补一次真实键盘输入（例如 Escape 关设置弹窗）
+const sendKey = process.env.SHOT_KEY || ''
+// 可选：截图前跑一段表达式，结果写进报告（用来断言「弹窗关掉了」这类交互结果）
+const checkExpr = process.env.SHOT_CHECK || ''
 
 const rendererHtml = path.resolve(__dirname, '../out/renderer/index.html')
 const preloadJs = path.resolve(__dirname, '../out/preload/index.js')
@@ -193,6 +202,10 @@ const measure = `(() => {
     body: box('.body'),
     content: box('.content'),
     page: box('.page'),
+    // 设置弹窗：量它自己有多大、离窗边多远，确认是「弹窗」而不是铺满整窗
+    mask: box('.mask'),
+    dialog: box('.dialog'),
+    tabs: box('.tabs'),
     overflowInside: scrollers
   };
 })()`
@@ -258,6 +271,29 @@ app.whenReady().then(async () => {
         results.push({ route, stage: 'click', error: String(e) })
       }
     }
+    for (const sel of clickSels) {
+      try {
+        const clicked = await win.webContents.executeJavaScript(
+          `(() => {
+             const el = document.querySelector(${JSON.stringify(sel)});
+             if (!el) return false;
+             el.click();
+             return true;
+           })()`
+        )
+        if (!clicked) results.push({ route, stage: 'click', warning: `未找到选择器 ${sel}` })
+        await sleep(600)
+      } catch (e) {
+        results.push({ route, stage: 'click', error: String(e) })
+      }
+    }
+    if (sendKey) {
+      win.focus()
+      win.webContents.focus()
+      win.webContents.sendInputEvent({ type: 'keyDown', keyCode: sendKey })
+      win.webContents.sendInputEvent({ type: 'keyUp', keyCode: sendKey })
+      await sleep(600)
+    }
     // 强制全量重绘：消除上一页残留的合成层
     win.setSize(winW + 1, winH + 1)
     win.webContents.invalidate()
@@ -268,10 +304,16 @@ app.whenReady().then(async () => {
 
     try {
       const metrics = await win.webContents.executeJavaScript(measure)
+      let check
+      if (checkExpr) {
+        check = await win.webContents.executeJavaScript(
+          `(() => { try { return ${checkExpr} } catch (e) { return 'ERR ' + e.message } })()`
+        )
+      }
       const img = await win.webContents.capturePage()
       const png = path.join(outDir, `shot-${name}.png`)
       fs.writeFileSync(png, img.toPNG())
-      results.push({ route, stage: 'ok', metrics, png, pngBytes: fs.statSync(png).size })
+      results.push({ route, stage: 'ok', check, metrics, png, pngBytes: fs.statSync(png).size })
     } catch (e) {
       results.push({ route, stage: 'measure', error: String((e && e.stack) || e) })
     }
