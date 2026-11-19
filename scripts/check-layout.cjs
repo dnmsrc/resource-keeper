@@ -26,6 +26,20 @@ const path = require('node:path')
 
 app.setName('resource-keeper')
 
+// 与 src/main/index.ts 的 displayPath 保持一致：截图会进 README，不能出现真实用户名
+function displayPath(target) {
+  const appData = app.getPath('appData')
+  const rel = path.relative(appData, target)
+  if (!rel || rel.startsWith('..')) return target
+  const token =
+    process.platform === 'win32'
+      ? '%APPDATA%'
+      : process.platform === 'darwin'
+        ? '~/Library/Application Support'
+        : '~/.config'
+  return path.join(token, rel)
+}
+
 const useApp = process.env.SHOT_APP === '1'
 const base = process.env.SHOT_BASE || 'http://127.0.0.1:8756/'
 const outDir = process.env.SHOT_DIR || __dirname
@@ -65,7 +79,7 @@ function registerIpcStubs() {
     chrome: process.versions.chrome,
     platform: process.platform,
     dev: true,
-    dataDir: app.getPath('userData')
+    dataDir: displayPath(app.getPath('userData'))
   }))
   ipcMain.handle('db:overview', () => ({
     libraries: 0,

@@ -1,8 +1,25 @@
 import { app, BrowserWindow, ipcMain, shell } from 'electron'
 import { mkdirSync } from 'node:fs'
-import { join } from 'node:path'
+import { join, relative } from 'node:path'
 
 app.setName('resource-keeper')
+
+/**
+ * 展示层路径压缩：把 userData 的绝对路径换成跨平台占位符。
+ * 界面里的数据目录会被截图进 README，不该出现真实用户名。
+ */
+function displayPath(target: string): string {
+  const appData = app.getPath('appData')
+  const rel = relative(appData, target)
+  if (!rel || rel.startsWith('..')) return target
+  const token =
+    process.platform === 'win32'
+      ? '%APPDATA%'
+      : process.platform === 'darwin'
+        ? '~/Library/Application Support'
+        : '~/.config'
+  return join(token, rel)
+}
 
 // 本机 Electron 在 userData 目录不存在时创建会失败（0x5 拒绝访问）并直接崩溃，
 // 且不留下任何日志。所以在 app ready 之前显式把目录建好、显式指定路径。
@@ -69,7 +86,7 @@ function registerIpc(): void {
     chrome: process.versions.chrome,
     platform: process.platform,
     dev: isDev,
-    dataDir: join(app.getPath('userData'))
+    dataDir: displayPath(app.getPath('userData'))
   }))
 
   ipcMain.on('win:minimize', (e) => BrowserWindow.fromWebContents(e.sender)?.minimize())
