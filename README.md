@@ -11,7 +11,8 @@
 当前是 **阶段 0：界面骨架**。所有页面、导航、视觉体系、IPC 通道都已跑通，数据是占位数据。
 
 - ✅ Electron + Vue 3 + TS + Sass 骨架，构建 / 类型检查通过
-- ✅ 7 个页面：总览、受管目录、扫描、待审、标签体系、对话、设置
+- ✅ 6 个页面：总览、受管目录、扫描、待审、标签体系、设置
+- ✅ 悬浮助手：右下角常驻，任意页面唤起，话术随当前页面切换（当前只有 UI，未接模型）
 - ✅ 主进程 / 渲染进程 IPC 通道搭好（`app:info`、`db:overview`、窗口控制）
 - ⬜ 真实扫描（文件遍历、容器识别、哈希采样）
 - ⬜ SQLite 台账（`data/keeper.db`）
@@ -30,9 +31,9 @@
 |---|---|
 | ![扫描](docs/screenshots/scan.png) | ![待审](docs/screenshots/review.png) |
 
-| 标签体系 | 对话 |
+| 标签体系 | 悬浮助手（任意页面可唤起） |
 |---|---|
-| ![标签体系](docs/screenshots/tags.png) | ![对话](docs/screenshots/chat.png) |
+| ![标签体系](docs/screenshots/tags.png) | ![悬浮助手](docs/screenshots/assistant.png) |
 
 设置页见 [docs/screenshots/settings.png](docs/screenshots/settings.png)。
 
@@ -70,8 +71,8 @@ resource-keeper/
 │           ├── App.vue        # 布局外壳：标题栏 / 侧栏 / 内容区
 │           ├── router/        # 页面路由
 │           ├── styles/        # _tokens.scss 设计令牌 + main.scss 全局样式
-│           ├── components/    # AppTitlebar / AppSidebar / StatCard
-│           └── views/         # 7 个页面
+│           ├── components/    # AppTitlebar / AppSidebar / AppAssistant / StatCard
+│           └── views/         # 6 个页面
 ├── scripts/check-layout.cjs   # 开发用：Electron 实测布局尺寸 + 逐页截图
 ├── electron.vite.config.ts
 ├── electron-builder.yml

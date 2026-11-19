@@ -4,11 +4,11 @@
  * 两种模式：
  *  1) 静态服务模式（不需要主进程逻辑，界面里会显示「仅桌面端可用」这类兜底文案）
  *     cd out/renderer && python -m http.server 8756
- *     SHOT_BASE=http://127.0.0.1:8756/ SHOT_PAGES=dashboard,chat \
+ *     SHOT_BASE=http://127.0.0.1:8756/ SHOT_PAGES=dashboard,libraries \
  *       ./node_modules/electron/dist/electron.exe --no-sandbox scripts/check-layout.cjs
  *
  *  2) 真实应用模式（挂上 preload + 和主进程一致的 IPC 桩，界面拿到真实的 dataDir/版本）
- *     SHOT_APP=1 SHOT_PAGES=dashboard,chat \
+ *     SHOT_APP=1 SHOT_PAGES=dashboard,libraries \
  *       ./node_modules/electron/dist/electron.exe --no-sandbox scripts/check-layout.cjs
  *
  * 踩过的坑（两个都跟 show:false + 无 GPU 有关，别删）：
@@ -47,6 +47,8 @@ const pages = (process.env.SHOT_PAGES || 'dashboard')
   .split(',')
   .map((p) => (p.startsWith('/') ? p : '/' + p))
 const outJson = path.join(outDir, 'layout-report.json')
+// 可选：加载完成后先点击一个选择器再截图（例如 SHOT_CLICK=.fab 截悬浮助手展开态）
+const clickSel = process.env.SHOT_CLICK || ''
 
 const rendererHtml = path.resolve(__dirname, '../out/renderer/index.html')
 const preloadJs = path.resolve(__dirname, '../out/preload/index.js')
@@ -147,6 +149,22 @@ app.whenReady().then(async () => {
       continue
     }
     await sleep(900)
+    if (clickSel) {
+      try {
+        const clicked = await win.webContents.executeJavaScript(
+          `(() => {
+             const el = document.querySelector(${JSON.stringify(clickSel)});
+             if (!el) return false;
+             el.click();
+             return true;
+           })()`
+        )
+        if (!clicked) results.push({ route, stage: 'click', warning: `未找到选择器 ${clickSel}` })
+        await sleep(520)
+      } catch (e) {
+        results.push({ route, stage: 'click', error: String(e) })
+      }
+    }
     // 强制全量重绘：消除上一页残留的合成层
     win.setSize(1401, 901)
     win.webContents.invalidate()

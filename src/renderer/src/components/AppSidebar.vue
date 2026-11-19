@@ -7,7 +7,6 @@ import {
   ScanOutline,
   CheckmarkDoneOutline,
   PricetagsOutline,
-  ChatbubblesOutline,
   SettingsOutline
 } from '@vicons/ionicons5'
 import type { Component } from 'vue'
@@ -27,7 +26,6 @@ const items: NavItem[] = [
   { path: '/scan', title: '扫描', icon: ScanOutline },
   { path: '/review', title: '待审', icon: CheckmarkDoneOutline },
   { path: '/tags', title: '标签体系', icon: PricetagsOutline },
-  { path: '/chat', title: '对话', icon: ChatbubblesOutline },
   { path: '/settings', title: '设置', icon: SettingsOutline }
 ]
 

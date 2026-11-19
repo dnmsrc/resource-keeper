@@ -8,6 +8,7 @@ import {
 } from 'naive-ui'
 import AppTitlebar from './components/AppTitlebar.vue'
 import AppSidebar from './components/AppSidebar.vue'
+import AppAssistant from './components/AppAssistant.vue'
 
 // 亮色 baseline：与 styles/_tokens.scss 中的 CSS 变量保持同一套色值
 const themeOverrides: GlobalThemeOverrides = {
@@ -53,6 +54,7 @@ const themeOverrides: GlobalThemeOverrides = {
                 <router-view />
               </main>
             </div>
+            <AppAssistant />
           </div>
         </n-notification-provider>
       </n-dialog-provider>
