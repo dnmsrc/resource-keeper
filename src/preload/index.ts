@@ -34,17 +34,40 @@ export interface DataDirInfo {
   defaultPath: string
 }
 
-/** 模型配置：对外只暴露 hasKey，不暴露明文 */
-export interface LlmPublic {
-  provider: string
+/** 模型服务：对外只暴露 hasKey，不发明文 */
+export interface ProviderPublic {
+  id: string
+  label: string
   baseUrl: string
   model: string
   hasKey: boolean
+  /** 内置预设为 true；用户自己加的不显示「自定义」徽章以外的差别 */
+  preset: boolean
+}
+
+export interface ProvidersState {
+  activeId: string
+  providers: ProviderPublic[]
+}
+
+export interface PresetDef {
+  id: string
+  label: string
+  desc: string
+  baseUrl: string
+  model: string
 }
 
 /** apiKey 留空表示「不修改已保存的 key」 */
-export interface LlmPatch {
-  provider?: string
+export interface ProviderPatch {
+  label?: string
+  baseUrl?: string
+  model?: string
+  apiKey?: string
+}
+
+export interface TestOptions {
+  id?: string
   baseUrl?: string
   model?: string
   apiKey?: string
@@ -74,12 +97,22 @@ const api = {
   },
 
   config: {
-    getLlm: (): Promise<LlmPublic> => ipcRenderer.invoke('config:llm:get'),
-    setLlm: (patch: LlmPatch): Promise<LlmPublic> => ipcRenderer.invoke('config:llm:set', patch)
+    llm: {
+      list: (): Promise<ProvidersState> => ipcRenderer.invoke('config:llm:list'),
+      presets: (): Promise<PresetDef[]> => ipcRenderer.invoke('config:llm:presets'),
+      /** presetId 走预设初始化；都不给则建一条空白自定义 */
+      add: (input: { presetId?: string; label?: string }): Promise<ProvidersState> =>
+        ipcRenderer.invoke('config:llm:add', input),
+      update: (id: string, patch: ProviderPatch): Promise<ProvidersState> =>
+        ipcRenderer.invoke('config:llm:update', id, patch),
+      remove: (id: string): Promise<ProvidersState> => ipcRenderer.invoke('config:llm:remove', id),
+      setActive: (id: string): Promise<ProvidersState> =>
+        ipcRenderer.invoke('config:llm:setActive', id)
+    }
   },
 
   llm: {
-    test: (): Promise<TestResult> => ipcRenderer.invoke('llm:test')
+    test: (opts?: TestOptions): Promise<TestResult> => ipcRenderer.invoke('llm:test', opts ?? {})
   }
 }
 

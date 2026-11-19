@@ -85,18 +85,63 @@ function registerIpcStubs() {
     fallback: false,
     defaultPath: dataDir
   }))
-  ipcMain.handle('config:llm:get', () => ({
-    provider: 'openai',
-    baseUrl: 'https://api.openai.com/v1',
-    model: 'gpt-4o-mini',
-    hasKey: false
-  }))
-  ipcMain.handle('config:llm:set', () => ({
-    provider: 'openai',
-    baseUrl: 'https://api.openai.com/v1',
-    model: 'gpt-4o-mini',
-    hasKey: false
-  }))
+  // 模型服务列表：截图时固定放几条，包含「使用中 / 未配密钥 / 自定义」三种形态
+  const providersState = () => ({
+    activeId: 'openai',
+    providers: [
+      {
+        id: 'openai',
+        label: 'OpenAI',
+        baseUrl: 'https://api.openai.com/v1',
+        model: 'gpt-4o-mini',
+        hasKey: true,
+        preset: true
+      },
+      {
+        id: 'deepseek',
+        label: 'DeepSeek',
+        baseUrl: 'https://api.deepseek.com/v1',
+        model: 'deepseek-chat',
+        hasKey: false,
+        preset: true
+      },
+      {
+        id: 'qwen',
+        label: '通义千问',
+        baseUrl: 'https://dashscope.aliyuncs.com/compatible-mode/v1',
+        model: 'qwen-plus',
+        hasKey: false,
+        preset: true
+      },
+      {
+        id: 'ollama',
+        label: 'Ollama',
+        baseUrl: 'http://localhost:11434/v1',
+        model: 'qwen2.5:7b',
+        hasKey: true,
+        preset: true
+      },
+      {
+        id: 'custom-ark',
+        label: '火山方舟 Coding Plan',
+        baseUrl: 'https://ark.cn-beijing.volces.com/api/v3',
+        model: 'doubao-seed-1-6',
+        hasKey: true,
+        preset: false
+      }
+    ]
+  })
+  ipcMain.handle('config:llm:list', providersState)
+  ipcMain.handle('config:llm:presets', () => [
+    { id: 'openai', label: 'OpenAI', desc: 'api.openai.com', baseUrl: 'https://api.openai.com/v1', model: 'gpt-4o-mini' },
+    { id: 'deepseek', label: 'DeepSeek', desc: 'api.deepseek.com', baseUrl: 'https://api.deepseek.com/v1', model: 'deepseek-chat' },
+    { id: 'qwen', label: '通义千问', desc: 'DashScope 兼容模式', baseUrl: 'https://dashscope.aliyuncs.com/compatible-mode/v1', model: 'qwen-plus' },
+    { id: 'ollama', label: 'Ollama', desc: '本机 11434 端口', baseUrl: 'http://localhost:11434/v1', model: 'qwen2.5:7b' }
+  ])
+  ipcMain.handle('config:llm:add', providersState)
+  ipcMain.handle('config:llm:update', providersState)
+  ipcMain.handle('config:llm:remove', providersState)
+  ipcMain.handle('config:llm:setActive', providersState)
   ipcMain.handle('llm:test', () => ({ ok: false, message: '截图模式不发起网络请求' }))
   ipcMain.handle('db:overview', () => ({
     libraries: 0,

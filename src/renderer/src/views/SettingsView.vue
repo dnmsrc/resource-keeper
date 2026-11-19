@@ -1,125 +1,166 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
-import { NCard, NInput, NButton, NTag, NTabs, NTabPane, NSelect, useMessage } from 'naive-ui'
+import {
+  NButton,
+  NCard,
+  NDropdown,
+  NInput,
+  NModal,
+  NPopconfirm,
+  NSelect,
+  NTabPane,
+  NTabs,
+  useMessage
+} from 'naive-ui'
 import { appInfo, refreshAppInfo } from '../lib/appInfo'
+import type { PresetDef, ProviderPublic, ProvidersState } from '../../../preload/index'
 
 const message = useMessage()
 
-interface ProviderPreset {
-  id: string
-  label: string
-  desc: string
-  baseUrl: string
-  /** 常用模型；只是候选，用户可以直接输入别的名字 */
-  models: string[]
+/**
+ * 常见模型名，只当下拉候选。
+ * 这里不校验：模型名由服务商决定，写死了以后新模型出来就用不了，
+ * 所以下拉可筛选、也可直接敲任意名字。
+ */
+const MODEL_HINTS: Record<string, string[]> = {
+  openai: ['gpt-4o-mini', 'gpt-4o', 'gpt-4.1-mini', 'o4-mini'],
+  deepseek: ['deepseek-chat', 'deepseek-reasoner'],
+  qwen: ['qwen-plus', 'qwen-max', 'qwen-turbo', 'qwen-long'],
+  ollama: ['qwen2.5:7b', 'qwen2.5:14b', 'llama3.1:8b']
 }
-
-// 只列真能跑通的 OpenAI 兼容端点。想接别的，选一个最接近的再改地址即可。
-const PROVIDERS: ProviderPreset[] = [
-  {
-    id: 'openai',
-    label: 'OpenAI',
-    desc: 'api.openai.com',
-    baseUrl: 'https://api.openai.com/v1',
-    models: ['gpt-4o-mini', 'gpt-4o', 'gpt-4.1-mini', 'o4-mini']
-  },
-  {
-    id: 'deepseek',
-    label: 'DeepSeek',
-    desc: 'api.deepseek.com',
-    baseUrl: 'https://api.deepseek.com/v1',
-    models: ['deepseek-chat', 'deepseek-reasoner']
-  },
-  {
-    id: 'qwen',
-    label: '通义千问',
-    desc: 'DashScope 兼容模式',
-    baseUrl: 'https://dashscope.aliyuncs.com/compatible-mode/v1',
-    models: ['qwen-plus', 'qwen-max', 'qwen-turbo', 'qwen-long']
-  },
-  {
-    id: 'ollama',
-    label: 'Ollama',
-    desc: '本机 11434 端口',
-    baseUrl: 'http://localhost:11434/v1',
-    models: ['qwen2.5:7b', 'qwen2.5:14b', 'llama3.1:8b']
-  }
-]
 
 const tab = ref('model')
-const provider = ref(PROVIDERS[0].id)
-const baseUrl = ref(PROVIDERS[0].baseUrl)
-const model = ref(PROVIDERS[0].models[0])
-const apiKey = ref('')
-const hasKey = ref(false)
-const busy = ref(false)
 
-// 当前服务商的模型候选；n-select 开了 tag，不在候选里的名字也能直接输入
-const modelOptions = computed(() => {
-  const p = PROVIDERS.find((x) => x.id === provider.value)
-  return (p?.models ?? []).map((m) => ({ label: m, value: m }))
+// ---- 模型服务列表 ----
+const state = ref<ProvidersState>({ activeId: '', providers: [] })
+const presets = ref<PresetDef[]>([])
+
+const addOptions = computed(() => {
+  const used = new Set(state.value.providers.map((p) => p.id))
+  const opts = presets.value
+    .filter((p) => !used.has(p.id))
+    .map((p) => ({ label: `${p.label} · ${p.desc}`, key: p.id }))
+  opts.push({ label: '自定义提供商…', key: '__custom' })
+  return opts
 })
 
-// 模板里直接读 reactive 单例时，vue-tsc 会按 ref 去找 .value；这里统一摊平成 computed
-const currentDir = computed(() => appInfo.dataDir ?? '')
-const isDefaultDir = computed(() => appInfo.dataDirDefault ?? true)
-const inDev = computed(() => appInfo.dev ?? false)
-const defaultLocation = computed(() => appInfo.defaultDataDir ?? '—')
-
-function pick(p: ProviderPreset): void {
-  if (provider.value === p.id) return
-  provider.value = p.id
-  baseUrl.value = p.baseUrl
-  model.value = p.models[0]
-  apiKey.value = ''
-}
-
-async function loadLlm(): Promise<void> {
+async function reload(): Promise<void> {
   try {
-    const c = await window.api.config.getLlm()
-    provider.value = c.provider
-    baseUrl.value = c.baseUrl
-    model.value = c.model
-    hasKey.value = c.hasKey
+    state.value = await window.api.config.llm.list()
   } catch {
-    /* 没有 preload（静态预览）时保持默认值 */
+    /* 没有 preload（静态预览）时留空 */
   }
 }
 
-async function saveLlm(): Promise<void> {
-  if (busy.value) return
-  busy.value = true
+async function loadPresets(): Promise<void> {
   try {
-    // 只有真的输入了新 key 才提交，留空表示保留磁盘上已加密的那一份
-    const c = await window.api.config.setLlm({
-      provider: provider.value,
-      baseUrl: baseUrl.value,
-      model: model.value,
-      ...(apiKey.value.trim() ? { apiKey: apiKey.value.trim() } : {})
+    presets.value = await window.api.config.llm.presets()
+  } catch {
+    presets.value = []
+  }
+}
+
+async function activate(p: ProviderPublic): Promise<void> {
+  if (p.id === state.value.activeId) return
+  try {
+    state.value = await window.api.config.llm.setActive(p.id)
+  } catch (e) {
+    message.error(`切换失败：${(e as Error).message}`)
+  }
+}
+
+async function addOne(key: string | number): Promise<void> {
+  const before = new Set(state.value.providers.map((p) => p.id))
+  try {
+    state.value = await window.api.config.llm.add(
+      key === '__custom' ? { label: '自定义提供商' } : { presetId: String(key) }
+    )
+    const created = state.value.providers.find((p) => !before.has(p.id))
+    // 新建完直接把编辑框拉起来，省一次点击
+    if (created) openEdit(created)
+    else message.info('这个提供商已经在列表里了')
+  } catch (e) {
+    message.error(`添加失败：${(e as Error).message}`)
+  }
+}
+
+async function remove(p: ProviderPublic): Promise<void> {
+  try {
+    state.value = await window.api.config.llm.remove(p.id)
+    message.success(`已删除 ${p.label}`)
+  } catch (e) {
+    message.error(`删除失败：${(e as Error).message}`)
+  }
+}
+
+// ---- 编辑弹窗 ----
+const showEdit = ref(false)
+const editingId = ref<string | null>(null)
+const saving = ref(false)
+const testing = ref(false)
+const form = ref({ label: '', baseUrl: '', model: '', apiKey: '', hasKey: false })
+
+const modelOptions = computed(() =>
+  (MODEL_HINTS[editingId.value ?? ''] ?? []).map((m) => ({ label: m, value: m }))
+)
+
+function openEdit(p: ProviderPublic): void {
+  editingId.value = p.id
+  form.value = {
+    label: p.label,
+    baseUrl: p.baseUrl,
+    model: p.model,
+    apiKey: '',
+    hasKey: p.hasKey
+  }
+  showEdit.value = true
+}
+
+async function save(): Promise<void> {
+  if (!editingId.value || saving.value) return
+  saving.value = true
+  try {
+    state.value = await window.api.config.llm.update(editingId.value, {
+      label: form.value.label,
+      baseUrl: form.value.baseUrl,
+      model: form.value.model,
+      // 留空表示保留磁盘上已加密的那一份
+      ...(form.value.apiKey.trim() ? { apiKey: form.value.apiKey.trim() } : {})
     })
-    hasKey.value = c.hasKey
-    apiKey.value = ''
+    showEdit.value = false
     message.success('已保存')
   } catch (e) {
     message.error(`保存失败：${(e as Error).message}`)
   } finally {
-    busy.value = false
+    saving.value = false
   }
 }
 
-async function testLlm(): Promise<void> {
-  if (busy.value) return
-  busy.value = true
+async function test(): Promise<void> {
+  if (testing.value) return
+  testing.value = true
   try {
-    const r = await window.api.llm.test()
+    // 传当前输入值：不用先保存也能试连一次
+    const r = await window.api.llm.test({
+      ...(editingId.value ? { id: editingId.value } : {}),
+      baseUrl: form.value.baseUrl,
+      model: form.value.model,
+      ...(form.value.apiKey.trim() ? { apiKey: form.value.apiKey.trim() } : {})
+    })
     if (r.ok) message.success(r.message)
     else message.error(r.message)
   } catch (e) {
     message.error(`测试失败：${(e as Error).message}`)
   } finally {
-    busy.value = false
+    testing.value = false
   }
 }
+
+// ---- 数据目录 ----
+const currentDir = computed(() => appInfo.dataDir ?? '')
+const isDefaultDir = computed(() => appInfo.dataDirDefault ?? true)
+const inDev = computed(() => appInfo.dev ?? false)
+const defaultLocation = computed(() => appInfo.defaultDataDir ?? '—')
 
 async function openDir(): Promise<void> {
   const err = await window.api.data.open()
@@ -146,7 +187,7 @@ async function resetDir(): Promise<void> {
 
 onMounted(async () => {
   await refreshAppInfo()
-  await loadLlm()
+  await Promise.all([reload(), loadPresets()])
 })
 </script>
 
@@ -161,68 +202,60 @@ onMounted(async () => {
 
     <n-tabs v-model:value="tab" type="line" animated>
       <n-tab-pane name="model" tab="模型">
-        <div class="model-grid">
-          <div class="providers">
-            <div class="sec-title">模型服务</div>
-            <button
-              v-for="p in PROVIDERS"
-              :key="p.id"
-              class="provider"
-              :class="{ active: provider === p.id }"
-              @click="pick(p)"
-            >
-              <span class="dot" :class="{ ok: provider === p.id && hasKey }" />
-              <span class="p-text">
-                <span class="p-name">{{ p.label }}</span>
-                <span class="p-desc">{{ p.desc }}</span>
-              </span>
-            </button>
-            <p class="tip">切换服务商会重置地址与模型名，已保存的密钥不会丢。</p>
+        <div class="model-wrap">
+          <div class="sec-head">
+            <h2 class="sec-title">模型</h2>
+            <p class="sec-sub">填入各提供商的 API 密钥即可使用其模型。</p>
           </div>
 
-          <n-card size="small" class="panel-card">
-            <div class="field">
-              <label>Base URL</label>
-              <n-input v-model:value="baseUrl" placeholder="https://api.openai.com/v1" />
-            </div>
-
-            <div class="field">
-              <label>模型</label>
-              <n-select
-                v-model:value="model"
-                :options="modelOptions"
-                filterable
-                tag
-                placeholder="选择或直接输入模型名"
+          <div class="plist">
+            <div
+              v-for="p in state.providers"
+              :key="p.id"
+              class="prow"
+              :class="{ active: p.id === state.activeId }"
+            >
+              <button
+                class="pname"
+                :title="p.id === state.activeId ? '当前使用的模型服务' : '设为当前使用的模型服务'"
+                @click="activate(p)"
+              >
+                {{ p.label }}
+              </button>
+              <span v-if="!p.preset" class="badge">自定义</span>
+              <span v-if="p.id === state.activeId" class="badge cur">使用中</span>
+              <span
+                class="dot"
+                :class="{ ok: p.hasKey }"
+                :title="p.hasKey ? '已配置密钥' : '还没配置密钥'"
               />
+
+              <div class="prow-actions">
+                <n-button size="small" class="edit-btn" @click="openEdit(p)">编辑</n-button>
+                <n-popconfirm @positive-click="remove(p)">
+                  <template #trigger>
+                    <n-button size="small" text type="error">删除</n-button>
+                  </template>
+                  删除「{{ p.label }}」？已保存的密钥会一起删掉。
+                </n-popconfirm>
+              </div>
             </div>
 
-            <div class="field">
-              <label>
-                API Key
-                <span v-if="hasKey" class="ok-text">已保存</span>
-              </label>
-              <n-input
-                v-model:value="apiKey"
-                type="password"
-                show-password-on="click"
-                :placeholder="hasKey ? '已保存，留空则不修改' : 'sk-…'"
-              />
-            </div>
+            <n-dropdown trigger="click" placement="bottom-start" :options="addOptions" @select="addOne">
+              <button class="add-btn">
+                <span class="plus">＋</span>
+                <span>添加模型提供商</span>
+              </button>
+            </n-dropdown>
 
-            <div class="actions">
-              <n-button size="small" quaternary :loading="busy" @click="testLlm">测试连通</n-button>
-              <span class="grow" />
-              <n-tag size="small" :bordered="false" :type="hasKey ? 'success' : 'default'">
-                {{ hasKey ? '已配置' : '未配置' }}
-              </n-tag>
-              <n-button size="small" type="primary" :loading="busy" @click="saveLlm">保存</n-button>
-            </div>
-
-            <p class="tip line">
-              密钥用系统 DPAPI 加密后存在本机配置里，不写进项目目录，也不进版本库。
+            <p v-if="!state.providers.length" class="tip">
+              列表还是空的。点上面「添加模型提供商」接一家，再填密钥。
             </p>
-          </n-card>
+          </div>
+
+          <p class="tip line">
+            密钥用系统 DPAPI 加密后存在本机配置里，不写进项目目录，也不进版本库。
+          </p>
         </div>
       </n-tab-pane>
 
@@ -256,56 +289,115 @@ onMounted(async () => {
         </n-card>
       </n-tab-pane>
     </n-tabs>
+
+    <n-modal
+      v-model:show="showEdit"
+      preset="card"
+      :title="`编辑 ${form.label || '模型服务'}`"
+      :bordered="false"
+      class="edit-modal"
+      style="width: 540px"
+    >
+      <div class="field">
+        <label>名称</label>
+        <n-input v-model:value="form.label" placeholder="OpenAI" />
+      </div>
+
+      <div class="field">
+        <label>Base URL</label>
+        <n-input v-model:value="form.baseUrl" placeholder="https://api.openai.com/v1" />
+      </div>
+
+      <div class="field">
+        <label>模型</label>
+        <n-select
+          v-model:value="form.model"
+          :options="modelOptions"
+          filterable
+          tag
+          placeholder="选择或直接输入模型名"
+        />
+      </div>
+
+      <div class="field">
+        <label>
+          API Key
+          <span v-if="form.hasKey" class="ok-text">已保存</span>
+        </label>
+        <n-input
+          v-model:value="form.apiKey"
+          type="password"
+          show-password-on="click"
+          :placeholder="form.hasKey ? '已保存，留空则不修改' : 'sk-…'"
+        />
+      </div>
+
+      <p class="tip">本地端点（如 Ollama）可以不填 Key；远端服务必须填。</p>
+
+      <template #footer>
+        <div class="modal-foot">
+          <n-button size="small" quaternary :loading="testing" @click="test">测试连通</n-button>
+          <span class="grow" />
+          <n-button size="small" @click="showEdit = false">取消</n-button>
+          <n-button size="small" type="primary" :loading="saving" @click="save">保存</n-button>
+        </div>
+      </template>
+    </n-modal>
   </div>
 </template>
 
 <style scoped>
-.model-grid {
-  display: grid;
-  grid-template-columns: 236px minmax(0, 1fr);
-  gap: 14px;
-  margin-top: 4px;
+.model-wrap {
+  max-width: 780px;
 }
 
-@media (max-width: 1080px) {
-  .model-grid {
-    grid-template-columns: minmax(0, 1fr);
-  }
-}
-
-.providers {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
+.sec-head {
+  margin: 4px 0 14px;
 }
 
 .sec-title {
-  font-size: 12px;
-  color: var(--text-3);
-  margin-bottom: 2px;
+  margin: 0 0 6px;
+  font-size: 17px;
+  font-weight: 650;
+  letter-spacing: 0.2px;
 }
 
-.provider {
-  width: 100%;
+.sec-sub {
+  margin: 0;
+  font-size: 12.5px;
+  color: var(--text-3);
+}
+
+.plist {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.prow {
   display: flex;
   align-items: center;
-  gap: 9px;
-  padding: 9px 11px;
+  gap: 10px;
+  padding: 13px 14px 13px 16px;
   border: 1px solid var(--line);
-  border-radius: 10px;
+  border-radius: 12px;
   background: var(--panel);
-  cursor: pointer;
-  text-align: left;
-  font: inherit;
   transition: border-color 0.15s, background 0.15s;
 }
 
-.provider:hover {
-  border-color: var(--line-strong);
-  background: var(--panel-2);
+/* Naive 的默认按钮边框太浅，白卡上基本看不见，按参考形态压深一点 */
+.edit-btn {
+  --n-border: 1px solid var(--line-strong) !important;
+  --n-border-hover: 1px solid var(--accent) !important;
+  --n-border-focus: 1px solid var(--accent) !important;
+  --n-text-color: var(--text-2) !important;
 }
 
-.provider.active {
+.prow:hover {
+  border-color: var(--line-strong);
+}
+
+.prow.active {
   border-color: var(--nav-active-border);
   background: var(--nav-active-bg);
 }
@@ -324,22 +416,70 @@ onMounted(async () => {
   box-shadow: 0 0 0 3px rgba(15, 159, 110, 0.14);
 }
 
-.p-text {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-  line-height: 1.35;
-}
-
-.p-name {
-  font-size: 13px;
-  font-weight: 550;
+.pname {
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-size: 15px;
+  font-weight: 600;
   color: var(--text);
+  cursor: pointer;
+  transition: color 0.15s;
 }
 
-.p-desc {
-  font-size: 11px;
+.pname:hover {
+  color: var(--accent);
+}
+
+.badge {
+  font-size: 10.5px;
+  line-height: 1.5;
+  padding: 1px 6px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
   color: var(--text-3);
+  background: var(--hover);
+}
+
+.badge.cur {
+  color: var(--accent);
+  border-color: var(--nav-active-border);
+  background: transparent;
+}
+
+.prow-actions {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.add-btn {
+  height: 46px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border: 1px dashed var(--line-strong);
+  border-radius: 12px;
+  background: transparent;
+  color: var(--text-2);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s, background 0.15s;
+}
+
+.add-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: var(--hover);
+}
+
+.plus {
+  font-size: 15px;
+  line-height: 1;
 }
 
 .field {
@@ -375,8 +515,19 @@ onMounted(async () => {
 }
 
 .tip.line {
-  padding-top: 10px;
+  padding-top: 12px;
+  margin-top: 14px;
   border-top: 1px solid var(--line-soft);
+}
+
+.modal-foot {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.grow {
+  flex: 1;
 }
 
 .dirbox {

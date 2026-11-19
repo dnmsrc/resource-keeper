@@ -1,7 +1,16 @@
 import { app, BrowserWindow, dialog, ipcMain, shell } from 'electron'
 import { mkdirSync } from 'node:fs'
 import { join } from 'node:path'
-import { dataDirInfo, loadLlm, saveLlm, setDataDir } from './config'
+import {
+  addProvider,
+  dataDirInfo,
+  presetList,
+  providersState,
+  removeProvider,
+  setActiveProvider,
+  setDataDir,
+  updateProvider
+} from './config'
 import { testConnection } from './llm'
 
 app.setName('resource-keeper')
@@ -109,18 +118,15 @@ function registerIpc(): void {
   ipcMain.handle('app:resetDataDir', () => setDataDir(null))
 
   // ---- 模型接入 ----
-  // 只回 hasKey，明文 key 不出主进程
-  ipcMain.handle('config:llm:get', () => {
-    const c = loadLlm()
-    return { provider: c.provider, baseUrl: c.baseUrl, model: c.model, hasKey: !!c.apiKey }
-  })
+  // 全部只回 hasKey，明文 key 不出主进程
+  ipcMain.handle('config:llm:list', () => providersState())
+  ipcMain.handle('config:llm:presets', () => presetList())
+  ipcMain.handle('config:llm:add', (_e, input) => addProvider(input ?? {}))
+  ipcMain.handle('config:llm:update', (_e, id: string, patch) => updateProvider(id, patch ?? {}))
+  ipcMain.handle('config:llm:remove', (_e, id: string) => removeProvider(id))
+  ipcMain.handle('config:llm:setActive', (_e, id: string) => setActiveProvider(id))
 
-  ipcMain.handle('config:llm:set', (_e, patch) => {
-    const c = saveLlm(patch ?? {})
-    return { provider: c.provider, baseUrl: c.baseUrl, model: c.model, hasKey: !!c.apiKey }
-  })
-
-  ipcMain.handle('llm:test', () => testConnection())
+  ipcMain.handle('llm:test', (_e, opts) => testConnection(opts ?? {}))
 
   // 占位：阶段 1 接入真实 SQLite 台账
   ipcMain.handle('db:overview', () => ({
