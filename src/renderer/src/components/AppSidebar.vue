@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import {
   GridOutline,
@@ -31,17 +31,6 @@ const items: NavItem[] = [
 
 const active = computed(() => route.path)
 
-const dataDir = ref('')
-
-onMounted(async () => {
-  try {
-    const info = await window.api?.info()
-    dataDir.value = info?.dataDir ?? ''
-  } catch {
-    dataDir.value = ''
-  }
-})
-
 function go(path: string): void {
   void router.push(path)
 }
@@ -62,11 +51,6 @@ function go(path: string): void {
         <span class="dot" />
       </button>
     </nav>
-
-    <div class="foot">
-      <div class="foot-title">数据目录</div>
-      <div class="foot-path mono" :title="dataDir">{{ dataDir || '仅桌面端可用' }}</div>
-    </div>
   </aside>
 </template>
 
@@ -144,26 +128,5 @@ function go(path: string): void {
 .nav-item.on .dot {
   background: var(--accent);
   box-shadow: 0 0 8px rgba(98, 80, 240, 0.45);
-}
-
-.foot {
-  margin-top: auto;
-  padding: 10px 10px 6px;
-  border-top: 1px solid var(--line-soft);
-}
-
-.foot-title {
-  font-size: 11px;
-  color: var(--text-3);
-  letter-spacing: 0.08em;
-  margin-bottom: 4px;
-}
-
-.foot-path {
-  color: var(--text-2);
-  font-size: 11.5px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 </style>

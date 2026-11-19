@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { onMounted } from 'vue'
 import {
   NConfigProvider,
   NMessageProvider,
@@ -8,7 +9,9 @@ import {
 } from 'naive-ui'
 import AppTitlebar from './components/AppTitlebar.vue'
 import AppSidebar from './components/AppSidebar.vue'
+import AppStatusBar from './components/AppStatusBar.vue'
 import AppAssistant from './components/AppAssistant.vue'
+import { refreshAppInfo } from './lib/appInfo'
 
 // 亮色 baseline：与 styles/_tokens.scss 中的 CSS 变量保持同一套色值
 const themeOverrides: GlobalThemeOverrides = {
@@ -39,6 +42,8 @@ const themeOverrides: GlobalThemeOverrides = {
   Card: { borderRadius: '14px' },
   DataTable: { thColor: '#f7f8fc', tdColor: '#ffffff', thTextColor: '#5a6478' }
 }
+
+onMounted(refreshAppInfo)
 </script>
 
 <template>
@@ -54,6 +59,7 @@ const themeOverrides: GlobalThemeOverrides = {
                 <router-view />
               </main>
             </div>
+            <AppStatusBar />
             <AppAssistant />
           </div>
         </n-notification-provider>

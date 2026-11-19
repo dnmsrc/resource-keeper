@@ -165,10 +165,10 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown))
 .panel {
   position: fixed;
   right: 22px;
-  bottom: 92px;
+  bottom: calc(92px + var(--statusbar-h));
   z-index: 41;
   width: 392px;
-  height: min(620px, calc(100vh - 116px));
+  height: min(620px, calc(100vh - 116px - var(--statusbar-h)));
   display: flex;
   flex-direction: column;
   background: var(--panel);
@@ -443,7 +443,7 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown))
 .fab {
   position: fixed;
   right: 22px;
-  bottom: 22px;
+  bottom: calc(22px + var(--statusbar-h));
   z-index: 42;
   width: 56px;
   height: 56px;

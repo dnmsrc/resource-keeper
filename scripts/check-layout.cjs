@@ -26,19 +26,8 @@ const path = require('node:path')
 
 app.setName('resource-keeper')
 
-// 与 src/main/index.ts 的 displayPath 保持一致：截图会进 README，不能出现真实用户名
-function displayPath(target) {
-  const appData = app.getPath('appData')
-  const rel = path.relative(appData, target)
-  if (!rel || rel.startsWith('..')) return target
-  const token =
-    process.platform === 'win32'
-      ? '%APPDATA%'
-      : process.platform === 'darwin'
-        ? '~/Library/Application Support'
-        : '~/.config'
-  return path.join(token, rel)
-}
+// 与 src/main/index.ts 的 defaultDataDir 保持一致：开发时落在项目同级目录
+const dataDir = path.resolve(__dirname, '../../resource-keeper-data')
 
 const useApp = process.env.SHOT_APP === '1'
 const base = process.env.SHOT_BASE || 'http://127.0.0.1:8756/'
@@ -49,6 +38,8 @@ const pages = (process.env.SHOT_PAGES || 'dashboard')
 const outJson = path.join(outDir, 'layout-report.json')
 // 可选：加载完成后先点击一个选择器再截图（例如 SHOT_CLICK=.fab 截悬浮助手展开态）
 const clickSel = process.env.SHOT_CLICK || ''
+// 可选：按可见文本点击（tab 之类没有稳定 class 的元素用它，例如 SHOT_CLICK_TEXT=数据）
+const clickText = process.env.SHOT_CLICK_TEXT || ''
 
 const rendererHtml = path.resolve(__dirname, '../out/renderer/index.html')
 const preloadJs = path.resolve(__dirname, '../out/preload/index.js')
@@ -81,8 +72,32 @@ function registerIpcStubs() {
     chrome: process.versions.chrome,
     platform: process.platform,
     dev: true,
-    dataDir: displayPath(app.getPath('userData'))
+    dataDir,
+    dataDirDefault: true,
+    dataDirFallback: false,
+    defaultDataDir: dataDir
   }))
+  ipcMain.handle('app:openDataDir', () => '')
+  ipcMain.handle('app:chooseDataDir', () => null)
+  ipcMain.handle('app:resetDataDir', () => ({
+    path: dataDir,
+    isDefault: true,
+    fallback: false,
+    defaultPath: dataDir
+  }))
+  ipcMain.handle('config:llm:get', () => ({
+    provider: 'openai',
+    baseUrl: 'https://api.openai.com/v1',
+    model: 'gpt-4o-mini',
+    hasKey: false
+  }))
+  ipcMain.handle('config:llm:set', () => ({
+    provider: 'openai',
+    baseUrl: 'https://api.openai.com/v1',
+    model: 'gpt-4o-mini',
+    hasKey: false
+  }))
+  ipcMain.handle('llm:test', () => ({ ok: false, message: '截图模式不发起网络请求' }))
   ipcMain.handle('db:overview', () => ({
     libraries: 0,
     files: 0,
@@ -161,6 +176,23 @@ app.whenReady().then(async () => {
         )
         if (!clicked) results.push({ route, stage: 'click', warning: `未找到选择器 ${clickSel}` })
         await sleep(520)
+      } catch (e) {
+        results.push({ route, stage: 'click', error: String(e) })
+      }
+    }
+    if (clickText) {
+      try {
+        const clicked = await win.webContents.executeJavaScript(
+          `(() => {
+             const nodes = [...document.querySelectorAll('.n-tabs-tab, button, a, [role="tab"]')];
+             const hit = nodes.find((n) => (n.textContent || '').trim() === ${JSON.stringify(clickText)});
+             if (!hit) return false;
+             hit.click();
+             return true;
+           })()`
+        )
+        if (!clicked) results.push({ route, stage: 'click', warning: `未找到文本 ${clickText}` })
+        await sleep(600)
       } catch (e) {
         results.push({ route, stage: 'click', error: String(e) })
       }

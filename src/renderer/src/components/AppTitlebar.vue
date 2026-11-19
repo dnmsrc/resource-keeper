@@ -1,18 +1,8 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
-import type { AppInfo } from '../../../preload/index'
+import { appInfo } from '../lib/appInfo'
 
 const route = useRoute()
-const info = ref<AppInfo | null>(null)
-
-onMounted(async () => {
-  try {
-    info.value = await window.api.info()
-  } catch {
-    info.value = null
-  }
-})
 </script>
 
 <template>
@@ -31,7 +21,6 @@ onMounted(async () => {
         </svg>
       </div>
       <span class="name">资源管家</span>
-      <span class="ver mono" v-if="info">v{{ info.version }}</span>
     </div>
 
     <div class="center">
@@ -39,8 +28,8 @@ onMounted(async () => {
     </div>
 
     <div class="right">
-      <span v-if="info?.dev" class="badge">DEV</span>
-      <span class="env mono" v-if="info">{{ info.platform }} · e{{ info.electron }}</span>
+      <!-- 运行时信息（平台、Electron 版本）不展示：版本号统一放窗口底部状态栏 -->
+      <span v-if="appInfo.dev" class="badge">DEV</span>
     </div>
   </header>
 </template>
@@ -83,10 +72,6 @@ onMounted(async () => {
   font-size: 13.5px;
 }
 
-.ver {
-  color: var(--text-3);
-}
-
 .center {
   flex: 1;
   display: flex;
@@ -106,10 +91,6 @@ onMounted(async () => {
   display: flex;
   align-items: center;
   gap: 10px;
-}
-
-.env {
-  color: var(--text-3);
 }
 
 .badge {
