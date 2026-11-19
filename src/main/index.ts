@@ -1,25 +1,10 @@
-import { app, BrowserWindow, ipcMain, shell } from 'electron'
+import { app, BrowserWindow, dialog, ipcMain, shell } from 'electron'
 import { mkdirSync } from 'node:fs'
-import { join, relative } from 'node:path'
+import { join } from 'node:path'
+import { dataDirInfo, loadLlm, saveLlm, setDataDir } from './config'
+import { testConnection } from './llm'
 
 app.setName('resource-keeper')
-
-/**
- * 展示层路径压缩：把 userData 的绝对路径换成跨平台占位符。
- * 界面里的数据目录会被截图进 README，不该出现真实用户名。
- */
-function displayPath(target: string): string {
-  const appData = app.getPath('appData')
-  const rel = relative(appData, target)
-  if (!rel || rel.startsWith('..')) return target
-  const token =
-    process.platform === 'win32'
-      ? '%APPDATA%'
-      : process.platform === 'darwin'
-        ? '~/Library/Application Support'
-        : '~/.config'
-  return join(token, rel)
-}
 
 // 本机 Electron 在 userData 目录不存在时创建会失败（0x5 拒绝访问）并直接崩溃，
 // 且不留下任何日志。所以在 app ready 之前显式把目录建好、显式指定路径。
@@ -78,16 +63,23 @@ function createWindow(): BrowserWindow {
 }
 
 function registerIpc(): void {
-  ipcMain.handle('app:info', () => ({
-    name: app.getName(),
-    version: app.getVersion(),
-    electron: process.versions.electron,
-    node: process.versions.node,
-    chrome: process.versions.chrome,
-    platform: process.platform,
-    dev: isDev,
-    dataDir: displayPath(app.getPath('userData'))
-  }))
+  ipcMain.handle('app:info', () => {
+    const dir = dataDirInfo()
+    return {
+      name: app.getName(),
+      version: app.getVersion(),
+      electron: process.versions.electron,
+      node: process.versions.node,
+      chrome: process.versions.chrome,
+      platform: process.platform,
+      dev: isDev,
+      // 直接给绝对路径：用户需要能拿去资源管理器里访问
+      dataDir: dir.path,
+      dataDirDefault: dir.isDefault,
+      dataDirFallback: dir.fallback,
+      defaultDataDir: dir.defaultPath
+    }
+  })
 
   ipcMain.on('win:minimize', (e) => BrowserWindow.fromWebContents(e.sender)?.minimize())
   ipcMain.on('win:toggle-maximize', (e) => {
@@ -97,6 +89,38 @@ function registerIpc(): void {
     else win.maximize()
   })
   ipcMain.on('win:close', (e) => BrowserWindow.fromWebContents(e.sender)?.close())
+
+  // ---- 数据目录 ----
+  ipcMain.handle('app:openDataDir', () => shell.openPath(dataDirInfo().path))
+
+  ipcMain.handle('app:chooseDataDir', async (e) => {
+    const win = BrowserWindow.fromWebContents(e.sender)
+    const opts = {
+      title: '选择数据目录',
+      properties: ['openDirectory', 'createDirectory'] as const
+    }
+    const picked = win
+      ? await dialog.showOpenDialog(win, { ...opts, properties: [...opts.properties] })
+      : await dialog.showOpenDialog({ ...opts, properties: [...opts.properties] })
+    if (picked.canceled || !picked.filePaths[0]) return null
+    return setDataDir(picked.filePaths[0])
+  })
+
+  ipcMain.handle('app:resetDataDir', () => setDataDir(null))
+
+  // ---- 模型接入 ----
+  // 只回 hasKey，明文 key 不出主进程
+  ipcMain.handle('config:llm:get', () => {
+    const c = loadLlm()
+    return { provider: c.provider, baseUrl: c.baseUrl, model: c.model, hasKey: !!c.apiKey }
+  })
+
+  ipcMain.handle('config:llm:set', (_e, patch) => {
+    const c = saveLlm(patch ?? {})
+    return { provider: c.provider, baseUrl: c.baseUrl, model: c.model, hasKey: !!c.apiKey }
+  })
+
+  ipcMain.handle('llm:test', () => testConnection())
 
   // 占位：阶段 1 接入真实 SQLite 台账
   ipcMain.handle('db:overview', () => ({
