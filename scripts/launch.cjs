@@ -2,7 +2,7 @@
 /**
  * 启动包装器：在 Electron 进程起来「之前」办好两件本机必需的事。
  *
- * 这台机器上 Electron 有两个启动即崩的坑，而且都发生在主进程 JS 执行之前
+ * 部分 Windows 环境下 Electron 有两个启动即崩的坑，而且都发生在主进程 JS 执行之前
  * （实测 src/main/index.ts 里的代码根本没跑到），所以只能在 spawn 前解决：
  *
  *   1. renderer sandbox 初始化失败 -> EXCEPTION_BREAKPOINT / exit 3

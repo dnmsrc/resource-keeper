@@ -1,15 +1,31 @@
+# 依赖与构建产物
 node_modules/
 out/
 dist/
 release/
-data/
-resources/bin/
-*.log
-.DS_Store
-config.json
-.env
 .vite/
+
+# 本机运行时数据（台账、使用记录、日志，一律不入库）
+data/
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+*.log
+
+# 本地配置与密钥
+.env
+.env.*
+!.env.example
+config.json
+config.local.json
+resources/bin/
+
 # 开发产物（截图脚本输出，不进版本库）
 scripts/shot-*.png
 scripts/layout-report.json
 .tmp-shot/
+
+# 系统与编辑器
+.DS_Store
+Thumbs.db
