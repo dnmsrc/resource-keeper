@@ -377,7 +377,7 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown))
               <!-- ============ 模型 ============ -->
               <section v-if="settings.section === 'model'" class="sec">
                 <h2 class="sec-title">模型</h2>
-                <p class="sec-sub">填入各提供商的 API 密钥即可使用其模型。</p>
+                <p class="sec-sub">填入 API 密钥即可使用这家服务商的模型；换一家就点「添加模型提供商」。</p>
 
                 <div class="plist">
                   <div
@@ -394,7 +394,6 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown))
                       >
                         {{ p.label }}
                       </button>
-                      <span v-if="!p.preset" class="tag">自定义</span>
                       <span v-if="p.id === state.activeId" class="tag cur">使用中</span>
                       <span
                         class="dot"
@@ -406,7 +405,7 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown))
                         <button class="line-btn" @click="toggleEdit(p)">
                           {{ editingId === p.id ? '收起' : '编辑' }}
                         </button>
-                        <n-popconfirm v-if="!p.preset" @positive-click="remove(p)">
+                        <n-popconfirm @positive-click="remove(p)">
                           <template #trigger>
                             <button class="line-btn danger">删除</button>
                           </template>

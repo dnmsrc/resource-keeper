@@ -33,29 +33,15 @@ export const PRESETS: PresetDef[] = [
     desc: 'api.openai.com',
     baseUrl: 'https://api.openai.com/v1',
     model: 'gpt-4o-mini'
-  },
-  {
-    id: 'deepseek',
-    label: 'DeepSeek',
-    desc: 'api.deepseek.com',
-    baseUrl: 'https://api.deepseek.com/v1',
-    model: 'deepseek-chat'
-  },
-  {
-    id: 'qwen',
-    label: '通义千问',
-    desc: 'DashScope 兼容模式',
-    baseUrl: 'https://dashscope.aliyuncs.com/compatible-mode/v1',
-    model: 'qwen-plus'
-  },
-  {
-    id: 'ollama',
-    label: 'Ollama',
-    desc: '本机 11434 端口',
-    baseUrl: 'http://localhost:11434/v1',
-    model: 'qwen2.5:7b'
   }
 ]
+
+/**
+ * 早期版本内置过、现在不再提供的预设。
+ * 配置里读到这些 id 就直接丢掉 —— 预设删了但旧配置还留着，界面会冒出一串用不上的条目。
+ * 只删「本来就是内置默认值」的那些条目，用户自己改过的 key/地址不做还原。
+ */
+const RETIRED_PRESET_IDS = new Set(['deepseek', 'qwen', 'ollama'])
 
 /** 模型目录里的一条：id 发给服务端，note 只给人看（比如「2折」） */
 export interface ModelEntry {
@@ -259,6 +245,12 @@ function normalize(): { providers: ProviderConfig[]; activeId: string; needSave:
     needSave = true
   } else {
     raw = defaultProviders()
+    needSave = true
+  }
+
+  // 旧配置里还留着已下线的内置预设：直接清掉
+  if (raw.some((p) => RETIRED_PRESET_IDS.has(p.id ?? ''))) {
+    raw = raw.filter((p) => !RETIRED_PRESET_IDS.has(p.id ?? ''))
     needSave = true
   }
 

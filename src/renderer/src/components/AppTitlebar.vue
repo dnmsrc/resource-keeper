@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { useRoute } from 'vue-router'
+import { SettingsOutline } from '@vicons/ionicons5'
 import { appInfo } from '../lib/appInfo'
+import { openSettings } from '../lib/settingsStore'
 
 const route = useRoute()
 </script>
@@ -30,6 +32,10 @@ const route = useRoute()
     <div class="right">
       <!-- 运行时信息（平台、Electron 版本）不展示：版本号统一放窗口底部状态栏 -->
       <span v-if="appInfo.dev" class="badge">DEV</span>
+      <!-- 设置入口放在右上角，紧邻系统的窗口按钮：侧栏只留页面导航 -->
+      <button class="gear" title="设置" aria-label="设置" @click="openSettings()">
+        <SettingsOutline />
+      </button>
     </div>
   </header>
 </template>
@@ -43,8 +49,9 @@ const route = useRoute()
   gap: 12px;
   padding: 0 152px 0 16px; /* 右侧给系统按钮留位 */
   border-bottom: 1px solid var(--line-soft);
-  background: var(--glass);
-  backdrop-filter: blur(12px);
+  /* 实色不能省：系统窗口按钮区由 titleBarOverlay 的 color 单画，
+     这里若是半透明玻璃层，那片会和标题栏差出一块底色 */
+  background: var(--titlebar-bg);
   -webkit-app-region: drag;
   user-select: none;
 }
@@ -101,5 +108,36 @@ const route = useRoute()
   color: #fff;
   background: linear-gradient(120deg, #6250f0, #0d9fbf);
   font-weight: 700;
+}
+
+/* 标题栏整条是拖拽区，按钮必须自己取消拖拽，否则点不动 */
+.gear {
+  -webkit-app-region: no-drag;
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-2);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+
+.gear:hover {
+  color: var(--text);
+  background: var(--hover-2);
+  border-color: var(--line-soft);
+}
+
+.gear:active {
+  background: var(--hover-2);
+}
+
+.gear :deep(svg) {
+  width: 17px;
+  height: 17px;
 }
 </style>

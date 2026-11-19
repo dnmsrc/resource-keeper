@@ -44,8 +44,11 @@ function createWindow(): BrowserWindow {
     autoHideMenuBar: true,
     backgroundColor: '#f5f6fa',
     titleBarStyle: 'hidden',
+    // 窗口按钮区（最小化/最大化/关闭）由系统按这个色自己画，渲染层盖不住它。
+    // 必须和渲染层的 --titlebar-bg 完全一致，否则右上角会出现一块色差。
+    // 改色时两处一起改：这里是主进程，那边在 src/renderer/src/styles/_tokens.scss
     titleBarOverlay: {
-      color: '#f5f6fa',
+      color: '#fafbfd',
       symbolColor: '#5a6478',
       height: 44
     },

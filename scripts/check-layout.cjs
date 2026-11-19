@@ -102,7 +102,8 @@ function registerIpcStubs() {
     fallback: false,
     defaultPath: dataDir
   }))
-  // 模型服务列表：截图时固定放几条，包含「使用中 / 未配密钥 / 自定义」三种形态
+  // 模型服务列表：截图时固定放两条 —— 内置的 OpenAI（带密钥、使用中）+ 一条自定义，
+  // 用来验证「所有条目都能删」和只剩一行时的界面形态
   const providersState = () => ({
     activeId: 'openai',
     providers: [
@@ -117,43 +118,20 @@ function registerIpcStubs() {
         preset: true
       },
       {
-        id: 'deepseek',
-        label: 'DeepSeek',
-        baseUrl: 'https://api.deepseek.com/v1',
-        protocol: 'openai',
-        model: 'deepseek-chat',
-        models: [{ id: 'deepseek-chat', note: '2折' }],
-        hasKey: false,
-        preset: true
-      },
-      {
-        id: 'ollama',
-        label: 'Ollama',
-        baseUrl: 'http://localhost:11434/v1',
-        protocol: 'openai',
-        model: 'qwen2.5:7b',
-        models: [{ id: 'qwen2.5:7b' }],
-        hasKey: true,
-        preset: true
-      },
-      {
         id: 'custom-ark',
         label: '火山方舟 Coding Plan',
         baseUrl: 'https://ark.cn-beijing.volces.com/api/v3',
         protocol: 'openai',
         model: 'doubao-seed-1-6',
         models: [{ id: 'doubao-seed-1-6', note: '2折' }, { id: 'deepseek-v3.1' }],
-        hasKey: true,
+        hasKey: false,
         preset: false
       }
     ]
   })
   ipcMain.handle('config:llm:list', providersState)
   ipcMain.handle('config:llm:presets', () => [
-    { id: 'openai', label: 'OpenAI', desc: 'api.openai.com', baseUrl: 'https://api.openai.com/v1', model: 'gpt-4o-mini' },
-    { id: 'deepseek', label: 'DeepSeek', desc: 'api.deepseek.com', baseUrl: 'https://api.deepseek.com/v1', model: 'deepseek-chat' },
-    { id: 'qwen', label: '通义千问', desc: 'DashScope 兼容模式', baseUrl: 'https://dashscope.aliyuncs.com/compatible-mode/v1', model: 'qwen-plus' },
-    { id: 'ollama', label: 'Ollama', desc: '本机 11434 端口', baseUrl: 'http://localhost:11434/v1', model: 'qwen2.5:7b' }
+    { id: 'openai', label: 'OpenAI', desc: 'api.openai.com', baseUrl: 'https://api.openai.com/v1', model: 'gpt-4o-mini' }
   ])
   ipcMain.handle('config:llm:protocols', () => [
     { id: 'openai', label: 'OpenAI Chat Completions', available: true, desc: '兼容端点通用' },
